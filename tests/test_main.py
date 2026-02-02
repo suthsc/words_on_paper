@@ -2,7 +2,7 @@
 
 import pytest
 
-from my_python_project.main import hello_world
+from words_on_paper.main import hello_world
 
 
 class TestHelloWorld:

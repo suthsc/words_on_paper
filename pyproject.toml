@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "my-python-project"
+name = "words-on-paper"
 version = "0.1.0"
-description = "A Python project with validation, linting, and standard tooling"
+description = "Video generator creating animated text on paper-like backgrounds using moviepy and PIL"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
@@ -24,7 +24,18 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
-dependencies = []
+dependencies = [
+    "moviepy>=1.0.3",
+    "pillow>=10.0.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "click>=8.0.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.65.0",
+]
+
+[project.scripts]
+words-on-paper = "words_on_paper.cli:cli"
 
 [project.optional-dependencies]
 dev = [
@@ -38,7 +49,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["my_python_project"]
+packages = ["words_on_paper"]
 
 [tool.black]
 line-length = 88
@@ -74,7 +85,7 @@ ignore = [
 ]
 
 [tool.ruff.isort]
-known-first-party = ["my_python_project"]
+known-first-party = ["words_on_paper"]
 
 [tool.mypy]
 python_version = "3.9"
@@ -91,7 +102,7 @@ strict_optional = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=my_python_project --cov-report=html --cov-report=term-missing"
+addopts = "--cov=words_on_paper --cov-report=html --cov-report=term-missing"
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"

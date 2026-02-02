@@ -1,0 +1,36 @@
+# Typing Effect Example
+# Text appears character by character
+
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+background:
+  type: paper
+  color: "#FFFFFF"
+  texture_intensity: 0.1
+
+texts:
+  - content: "Typing text appears like this"
+    start_time: 0.0
+    fade_in_duration: 0.5
+    display_duration: 3.0
+    fade_out_duration: 0.5
+    orientation: horizontal
+    position:
+      mode: center
+    font:
+      family: Arial
+      size: 64
+      color: "#333333"
+    effects:
+      typing:
+        enabled: true
+        chars_per_second: 5
+      drop_shadow:
+        enabled: true
+        offset_x: 2
+        offset_y: 2
+        blur_radius: 3
+    z_index: 0
