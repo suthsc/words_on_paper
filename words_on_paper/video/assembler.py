@@ -59,8 +59,4 @@ def generate_video(config: VideoConfig, output_path: str | Path) -> None:
 
     # Write video file
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    clip.write_videofile(
-        str(output_path),
-        verbose=False,
-        logger=None,
-    )
+    clip.write_videofile(str(output_path))
