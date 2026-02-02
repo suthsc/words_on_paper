@@ -20,10 +20,10 @@ texts:
     fade_out_duration: 0.5
     orientation: horizontal
     position:
-      mode: center
+      mode: random
     font:
-      family: Arial
-      size: 80
+      family: "Arial Black"
+      size: 36
       color: "#1a1a1a"
     effects:
       typing:
@@ -45,10 +45,10 @@ texts:
     fade_out_duration: 1.0
     orientation: horizontal
     position:
-      mode: center
+      mode: random
     font:
       family: Arial
-      size: 48
+      size: 24
       color: "#666666"
     effects:
       typing:
@@ -73,7 +73,7 @@ texts:
       y: 300
     font:
       family: Arial
-      size: 56
+      size: 18
       color: "#3333cc"
     effects:
       typing:
@@ -93,10 +93,10 @@ texts:
     fade_out_duration: 1.0
     orientation: horizontal
     position:
-      mode: center
+      mode: random
     font:
       family: Arial
-      size: 64
+      size: 18
       color: "#000000"
     effects:
       typing:

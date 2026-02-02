@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 class Position(BaseModel):
     """Text positioning configuration."""
 
-    mode: Literal["center", "absolute", "relative"] = "center"
+    mode: Literal["center", "absolute", "relative", "random"] = "center"
     x: Optional[float] = None
     y: Optional[float] = None
 
@@ -27,7 +27,7 @@ class Font(BaseModel):
     """Font configuration for text rendering."""
 
     family: str = "Arial"
-    size: int = Field(default=72, gt=0)
+    size: int = Field(default=72, gt=0, description="Font size in pixels")
     color: str = "#000000"
 
 

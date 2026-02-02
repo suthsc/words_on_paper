@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from typing import Any
 
 from PIL import Image
@@ -138,6 +139,7 @@ def _render_text_layer(
         text_img.height,
         video_width,
         video_height,
+        text_seq.content,
     )
 
     return text_img, x, y
@@ -213,6 +215,7 @@ def _calculate_position(
     text_height: int,
     video_width: int,
     video_height: int,
+    text_content: str = "",
 ) -> tuple[int, int]:
     """
     Calculate x, y position based on positioning mode.
@@ -223,6 +226,7 @@ def _calculate_position(
         text_height: Text image height
         video_width: Video width
         video_height: Video height
+        text_content: Text content for deterministic random seeding
 
     Returns:
         (x, y) position
@@ -233,6 +237,25 @@ def _calculate_position(
     elif position_config.mode == "relative":
         x = int(video_width * (position_config.x or 0))
         y = int(video_height * (position_config.y or 0))
+    elif position_config.mode == "random":
+        # Use text content for deterministic random positioning
+        rng = random.Random(text_content)
+        # Constrain to 20-80% of available space, but allow full range if text is too large
+        x_min = int(video_width * 0.2)
+        x_max = int(video_width * 0.8 - text_width)
+        y_min = int(video_height * 0.2)
+        y_max = int(video_height * 0.8 - text_height)
+
+        # If text is larger than available space, use full range
+        if x_max < x_min:
+            x_min = 0
+            x_max = max(0, video_width - text_width)
+        if y_max < y_min:
+            y_min = 0
+            y_max = max(0, video_height - text_height)
+
+        x = rng.randint(x_min, x_max) if x_max >= x_min else x_min
+        y = rng.randint(y_min, y_max) if y_max >= y_min else y_min
     else:  # center
         x = (video_width - text_width) // 2
         y = (video_height - text_height) // 2

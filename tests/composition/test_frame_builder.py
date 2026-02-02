@@ -2,8 +2,11 @@
 
 from PIL import Image
 
-from words_on_paper.composition.frame_builder import build_frame
-from words_on_paper.config.schema import TextSequence, VideoConfig
+from words_on_paper.composition.frame_builder import (
+    _calculate_position,
+    build_frame,
+)
+from words_on_paper.config.schema import Position, TextSequence, VideoConfig
 
 
 class TestBuildFrame:
@@ -144,3 +147,52 @@ class TestBuildFrame:
         )
         frame = build_frame(config, 0.5)
         assert frame.size == (1280, 720)
+
+    def test_build_frame_with_random_position(self) -> None:
+        """Test frame with random positioning mode."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Random",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=2,
+                    fade_out_duration=0,
+                    position=Position(mode="random"),
+                )
+            ]
+        )
+        frame = build_frame(config, 0.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_calculate_position_random_mode(self) -> None:
+        """Test position calculation with random mode."""
+        position_config = Position(mode="random")
+        text_width = 100
+        text_height = 50
+        video_width = 1920
+        video_height = 1080
+
+        # Calculate position for specific text
+        x1, y1 = _calculate_position(
+            position_config, text_width, text_height, video_width, video_height, "test"
+        )
+
+        # Same text should produce same position (deterministic)
+        x2, y2 = _calculate_position(
+            position_config, text_width, text_height, video_width, video_height, "test"
+        )
+        assert x1 == x2
+        assert y1 == y2
+
+        # Different text should produce different position
+        x3, y3 = _calculate_position(
+            position_config, text_width, text_height, video_width, video_height, "other"
+        )
+        assert not (x1 == x3 and y1 == y3)
+
+        # Position should be within 20-80% bounds
+        assert x1 >= int(video_width * 0.2)
+        assert x1 <= int(video_width * 0.8 - text_width)
+        assert y1 >= int(video_height * 0.2)
+        assert y1 <= int(video_height * 0.8 - text_height)
