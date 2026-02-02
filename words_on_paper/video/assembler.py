@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 from tqdm import tqdm
 
@@ -51,7 +52,7 @@ def generate_video(config: VideoConfig, output_path: str | Path) -> None:
     ):
         time = frame_num / fps
         frame = build_frame(config, time)
-        frames.append(frame)
+        frames.append(np.array(frame))
 
     # Create video clip
     clip = ImageSequenceClip(frames, fps=fps)
