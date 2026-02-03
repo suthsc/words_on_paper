@@ -6,9 +6,11 @@ import random
 from typing import Any
 
 from PIL import Image
+from PIL.Image import Resampling
 
 from words_on_paper.background import generate_background
 from words_on_paper.composition.animator import (
+    calculate_scale_factor,
     calculate_text_opacity,
     calculate_visible_chars,
 )
@@ -123,7 +125,32 @@ def _render_text_layer(
         text_seq.orientation,
     )
 
-    # Calculate position BEFORE any cropping (based on full text dimensions)
+    # Calculate and apply scale effect
+    scale_factor = 1.0
+    if text_seq.effects.scale.enabled:
+        scale_factor = calculate_scale_factor(
+            current_time=current_time,
+            start_time=text_seq.start_time,
+            fade_in_duration=text_seq.fade_in_duration,
+            display_duration=text_seq.display_duration,
+            fade_out_duration=text_seq.fade_out_duration,
+            initial_scale=text_seq.effects.scale.initial_scale,
+            apply_to_fade_out=text_seq.effects.scale.apply_to_fade_out,
+            easing=text_seq.effects.scale.easing,
+        )
+
+        if scale_factor != 1.0:
+            new_width = int(full_text_img.width * scale_factor)
+            new_height = int(full_text_img.height * scale_factor)
+            # Ensure minimum 1px dimensions
+            new_width = max(1, new_width)
+            new_height = max(1, new_height)
+            full_text_img = full_text_img.resize(
+                (new_width, new_height),
+                Resampling.LANCZOS,
+            )
+
+    # Calculate position BEFORE any cropping (based on scaled text dimensions)
     x, y = _calculate_position(
         text_seq.position,
         full_text_img.width,

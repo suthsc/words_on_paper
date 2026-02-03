@@ -6,7 +6,11 @@ from words_on_paper.composition.frame_builder import (
     _calculate_position,
     build_frame,
 )
-from words_on_paper.config.schema import Position, TextSequence, VideoConfig
+from words_on_paper.config.schema import (
+    Position,
+    TextSequence,
+    VideoConfig,
+)
 
 
 class TestBuildFrame:
@@ -196,3 +200,97 @@ class TestBuildFrame:
         assert x1 <= int(video_width * 0.8 - text_width)
         assert y1 >= int(video_height * 0.2)
         assert y1 <= int(video_height * 0.8 - text_height)
+
+    def test_build_frame_with_scale_effect(self) -> None:
+        """Test frame building with scale effect enabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Scaled",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects={"scale": {"enabled": True, "initial_scale": 0.5}},
+                )
+            ]
+        )
+        # During fade-in, text should be scaled
+        frame_fade_in = build_frame(config, 0.5)
+        assert isinstance(frame_fade_in, Image.Image)
+
+        # During display, text should be at full scale
+        frame_display = build_frame(config, 1.5)
+        assert isinstance(frame_display, Image.Image)
+
+        # During fade-out, text should be scaled
+        frame_fade_out = build_frame(config, 3.5)
+        assert isinstance(frame_fade_out, Image.Image)
+
+    def test_build_frame_scale_effect_fade_out_disabled(self) -> None:
+        """Test scale effect with fade-out effect disabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="No Fade Out Scale",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects={
+                        "scale": {
+                            "enabled": True,
+                            "initial_scale": 0.5,
+                            "apply_to_fade_out": False,
+                        }
+                    },
+                )
+            ]
+        )
+        frame = build_frame(config, 3.5)  # During fade-out
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_scale_effect_different_easing(self) -> None:
+        """Test scale effect with different easing types."""
+        for easing in ["linear", "ease_in", "ease_out", "ease_in_out"]:
+            config = VideoConfig(
+                texts=[
+                    TextSequence(
+                        content="Easing Test",
+                        start_time=0,
+                        fade_in_duration=1,
+                        display_duration=2,
+                        fade_out_duration=1,
+                        effects={
+                            "scale": {
+                                "enabled": True,
+                                "initial_scale": 0.5,
+                                "easing": easing,
+                            }
+                        },
+                    )
+                ]
+            )
+            frame = build_frame(config, 0.5)  # During fade-in
+            assert isinstance(frame, Image.Image)
+
+    def test_build_frame_scale_with_typing_effect(self) -> None:
+        """Test scale effect combined with typing effect."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Scaled Typing",
+                    start_time=0,
+                    fade_in_duration=0.5,
+                    display_duration=2,
+                    fade_out_duration=0.5,
+                    effects={
+                        "scale": {"enabled": True, "initial_scale": 0.5},
+                        "typing": {"enabled": True, "chars_per_second": 2},
+                        "drop_shadow": {"enabled": False},
+                    },
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)

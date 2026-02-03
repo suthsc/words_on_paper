@@ -9,7 +9,8 @@
       "Bash(find:*)",
       "Bash(uv pip install:*)",
       "Bash(python -m pytest:*)",
-      "Bash(words-on-paper generate:*)"
+      "Bash(words-on-paper generate:*)",
+      "Bash(uv venv:*)"
     ]
   }
 }

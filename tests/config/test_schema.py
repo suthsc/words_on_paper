@@ -8,6 +8,7 @@ from words_on_paper.config.schema import (
     Effects,
     Font,
     Position,
+    ScaleEffect,
     TextSequence,
     VideoConfig,
 )
@@ -68,6 +69,64 @@ class TestFont:
             Font(size=-10)
 
 
+class TestScaleEffect:
+    """Test ScaleEffect configuration."""
+
+    def test_scale_effect_default(self) -> None:
+        """Test scale effect with defaults."""
+        scale = ScaleEffect()
+        assert not scale.enabled
+        assert scale.initial_scale == 0.5
+        assert scale.apply_to_fade_out
+        assert scale.easing == "ease_in_out"
+
+    def test_scale_effect_custom(self) -> None:
+        """Test scale effect with custom values."""
+        scale = ScaleEffect(
+            enabled=True,
+            initial_scale=0.3,
+            apply_to_fade_out=False,
+            easing="linear",
+        )
+        assert scale.enabled
+        assert scale.initial_scale == 0.3
+        assert not scale.apply_to_fade_out
+        assert scale.easing == "linear"
+
+    def test_scale_effect_invalid_scale_too_small(self) -> None:
+        """Test that scale < 0 is rejected."""
+        with pytest.raises(ValidationError):
+            ScaleEffect(initial_scale=0.0)
+        with pytest.raises(ValidationError):
+            ScaleEffect(initial_scale=-0.1)
+
+    def test_scale_effect_invalid_scale_too_large(self) -> None:
+        """Test that scale > 1 is rejected."""
+        with pytest.raises(ValidationError):
+            ScaleEffect(initial_scale=1.1)
+
+    def test_scale_effect_valid_scale_bounds(self) -> None:
+        """Test valid scale boundaries."""
+        # Minimum valid value (just above 0)
+        scale_min = ScaleEffect(initial_scale=0.0001)
+        assert scale_min.initial_scale == pytest.approx(0.0001)
+
+        # Maximum valid value (exactly 1)
+        scale_max = ScaleEffect(initial_scale=1.0)
+        assert scale_max.initial_scale == 1.0
+
+    def test_scale_effect_invalid_easing(self) -> None:
+        """Test that invalid easing is rejected."""
+        with pytest.raises(ValidationError):
+            ScaleEffect(easing="invalid_easing")
+
+    def test_scale_effect_valid_easing_types(self) -> None:
+        """Test all valid easing types."""
+        for easing_type in ["linear", "ease_in", "ease_out", "ease_in_out"]:
+            scale = ScaleEffect(easing=easing_type)
+            assert scale.easing == easing_type
+
+
 class TestEffects:
     """Test Effects configuration."""
 
@@ -76,6 +135,13 @@ class TestEffects:
         effects = Effects()
         assert not effects.typing.enabled
         assert effects.drop_shadow.enabled
+        assert not effects.scale.enabled
+
+    def test_effects_with_scale(self) -> None:
+        """Test effects with scale effect enabled."""
+        effects = Effects(scale=ScaleEffect(enabled=True, initial_scale=0.6))
+        assert effects.scale.enabled
+        assert effects.scale.initial_scale == 0.6
 
 
 class TestTextSequence:

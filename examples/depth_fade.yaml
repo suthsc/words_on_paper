@@ -1,0 +1,30 @@
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+background:
+  type: solid
+  color: "#FFFFFF"
+
+texts:
+  - content: "Depth Effect Demo"
+    start_time: 0.0
+    fade_in_duration: 2.0
+    display_duration: 2.0
+    fade_out_duration: 2.0
+
+    font:
+      family: Arial
+      size: 120
+      color: "#000000"
+
+    position:
+      mode: center
+
+    effects:
+      scale:
+        enabled: true
+        initial_scale: 0.5
+        apply_to_fade_out: true
+        easing: ease_in_out

@@ -48,11 +48,21 @@ class DropShadow(BaseModel):
     color: str = "#00000040"
 
 
+class ScaleEffect(BaseModel):
+    """Scale/depth effect during fade animations."""
+
+    enabled: bool = False
+    initial_scale: float = Field(default=0.5, gt=0.0, le=1.0)
+    apply_to_fade_out: bool = True
+    easing: Literal["linear", "ease_in", "ease_out", "ease_in_out"] = "ease_in_out"
+
+
 class Effects(BaseModel):
     """Effect configurations."""
 
     typing: TypingEffect = Field(default_factory=TypingEffect)
     drop_shadow: DropShadow = Field(default_factory=DropShadow)
+    scale: ScaleEffect = Field(default_factory=ScaleEffect)
 
 
 class TextSequence(BaseModel):
