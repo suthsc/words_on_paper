@@ -24,7 +24,7 @@ texts:
       x: 200
       y: 200
     font:
-      family: Arial
+      family: Baskerville
       size: 60
       color: "#1a1a1a"
     effects:
@@ -50,7 +50,7 @@ texts:
       x: 300
       y: 400
     font:
-      family: Arial
+      family: Baskerville
       size: 56
       color: "#4a4a4a"
     effects:
@@ -74,7 +74,7 @@ texts:
     position:
       mode: center
     font:
-      family: Arial
+      family: Baskerville
       size: 72
       color: "#000000"
     effects:

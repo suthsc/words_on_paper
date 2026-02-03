@@ -7,7 +7,9 @@
       "Bash(mypy:*)",
       "Bash(words-on-paper validate:*)",
       "Bash(find:*)",
-      "Bash(uv pip install:*)"
+      "Bash(uv pip install:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(words-on-paper generate:*)"
     ]
   }
 }
