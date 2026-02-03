@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from PIL import ImageFont
@@ -29,6 +30,9 @@ def load_font(family: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.Imag
         f"{family}.ttf",
         f"{family}Regular.ttf",
         f"{family} Regular.ttf",
+        f"{family} Bold.ttf",
+        f"{family} Italic.ttf",
+        f"{family} Bold Italic.ttf",
         f"{family}HB.ttc",
         f"{family}.ttc",
     ]
@@ -58,14 +62,25 @@ def load_font(family: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.Imag
                 except Exception:
                     continue
 
+    # Font not found, try fallback
+    print(
+        f"Warning: Font '{family}' not found. Available fonts: Arial, Georgia, Verdana, Trebuchet MS, or others in /System/Library/Fonts/Supplemental/",
+        file=sys.stderr,
+    )
+
     # Try Helvetica as fallback for Arial
     if family.lower() == "arial":
         try:
+            print(f"Warning: Using 'Helvetica' instead of '{family}'", file=sys.stderr)
             return load_font("Helvetica", size)
         except Exception:
             pass
 
     # Fallback to default font
+    print(
+        f"Warning: Using default bitmap font for '{family}' (text may not render correctly)",
+        file=sys.stderr,
+    )
     return ImageFont.load_default()
 
 

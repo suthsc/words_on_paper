@@ -104,25 +104,50 @@ def _render_text_layer(
         return None, 0, 0
 
     # Calculate visible characters for typing effect
-    visible_chars = text_seq.content
+    visible_char_count = len(text_seq.content)
     if text_seq.effects.typing.enabled:
-        char_count = calculate_visible_chars(
+        visible_char_count = calculate_visible_chars(
             current_time,
             text_seq.start_time,
             text_seq.fade_in_duration,
             len(text_seq.content),
             text_seq.effects.typing.chars_per_second,
         )
-        visible_chars = text_seq.content[:char_count]
 
-    # Render text
-    text_img = render_text(
-        visible_chars,
+    # Render full text (for consistent positioning)
+    full_text_img = render_text(
+        text_seq.content,
         text_seq.font.family,
         text_seq.font.size,
         text_seq.font.color,
         text_seq.orientation,
     )
+
+    # Calculate position BEFORE any cropping (based on full text dimensions)
+    x, y = _calculate_position(
+        text_seq.position,
+        full_text_img.width,
+        full_text_img.height,
+        video_width,
+        video_height,
+        text_seq.content,
+    )
+
+    # For typing effect, clip to show only visible characters
+    text_img = full_text_img
+    if text_seq.effects.typing.enabled and visible_char_count < len(text_seq.content):
+        # Render visible text to get its dimensions
+        visible_text_img = render_text(
+            text_seq.content[:visible_char_count],
+            text_seq.font.family,
+            text_seq.font.size,
+            text_seq.font.color,
+            text_seq.orientation,
+        )
+        # Crop the full text image to show only visible portion
+        text_img = full_text_img.crop(
+            (0, 0, visible_text_img.width, visible_text_img.height)
+        )
 
     # Apply opacity
     if opacity < 1.0:
@@ -131,16 +156,6 @@ def _render_text_layer(
     # Apply drop shadow if enabled
     if text_seq.effects.drop_shadow.enabled:
         text_img = _apply_drop_shadow(text_img, text_seq.effects.drop_shadow)
-
-    # Calculate position
-    x, y = _calculate_position(
-        text_seq.position,
-        text_img.width,
-        text_img.height,
-        video_width,
-        video_height,
-        text_seq.content,
-    )
 
     return text_img, x, y
 

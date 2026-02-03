@@ -45,14 +45,18 @@ def generate_video(config: VideoConfig, output_path: str | Path) -> None:
 
     # Generate frames
     frames = []
-    for frame_num in tqdm(
+    pbar = tqdm(
         range(total_frames),
         desc="Generating frames",
         total=total_frames,
-    ):
+    )
+    for frame_num in pbar:
         time = frame_num / fps
         frame = build_frame(config, time)
         frames.append(np.array(frame))
+        # Update progress bar to show current time
+        mins, secs = divmod(time, 60)
+        pbar.set_description(f"Generating frames (time: {int(mins):02d}:{secs:05.2f})")
 
     # Create video clip
     clip = ImageSequenceClip(frames, fps=fps)

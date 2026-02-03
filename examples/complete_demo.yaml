@@ -16,9 +16,9 @@ texts:
   - content: "Words on Paper"
     start_time: 0.0
     fade_in_duration: 0.5
-    display_duration: 3.0
+    display_duration: 7.0
     fade_out_duration: 0.5
-    orientation: horizontal
+    orientation: vertical
     position:
       mode: random
     font:
@@ -47,7 +47,7 @@ texts:
     position:
       mode: random
     font:
-      family: Arial
+      family: Georgia
       size: 24
       color: "#666666"
     effects:
@@ -72,7 +72,7 @@ texts:
       x: 1600
       y: 300
     font:
-      family: Arial
+      family: Luminari
       size: 18
       color: "#3333cc"
     effects:
@@ -95,12 +95,13 @@ texts:
     position:
       mode: random
     font:
-      family: Arial
+      family: SignPainter
       size: 18
       color: "#000000"
     effects:
       typing:
-        enabled: false
+        enabled: true
+        chars_per_second: 8
       drop_shadow:
         enabled: true
         offset_x: 3

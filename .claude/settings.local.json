@@ -5,7 +5,9 @@
       "Bash(pytest:*)",
       "Bash(ruff check:*)",
       "Bash(mypy:*)",
-      "Bash(words-on-paper validate:*)"
+      "Bash(words-on-paper validate:*)",
+      "Bash(find:*)",
+      "Bash(uv pip install:*)"
     ]
   }
 }

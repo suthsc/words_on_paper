@@ -21,7 +21,7 @@ texts:
     position:
       mode: center
     font:
-      family: Arial
+      family: Georgia
       size: 72
       color: "#000000"
     effects:
