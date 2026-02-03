@@ -29,11 +29,21 @@ def _generate_frame_batch(
         Tuple of (batch_start_index, list of frame arrays)
     """
     frames = []
-    for frame_num in frame_numbers:
+    batch_start = frame_numbers[0]
+    batch_end = frame_numbers[-1]
+    start_time = batch_start / fps
+
+    pbar = tqdm(
+        frame_numbers,
+        desc=f"Chunk [{int(start_time // 60):02d}:{int(start_time % 60):02d} - {int(batch_end / fps // 60):02d}:{int(batch_end / fps % 60):02d}]",
+        leave=False,
+    )
+    for frame_num in pbar:
         time = frame_num / fps
         frame = build_frame(config, time)
         frames.append(np.array(frame))
-    return frame_numbers[0], frames
+
+    return batch_start, frames
 
 
 def generate_video(config: VideoConfig, output_path: str | Path) -> None:
@@ -80,20 +90,25 @@ def generate_video(config: VideoConfig, output_path: str | Path) -> None:
     frames_dict: dict[int, list[np.ndarray]] = {}
     with ProcessPoolExecutor(max_workers=8) as executor:
         futures = {
-            executor.submit(_generate_frame_batch, config, batch, int(fps)): batch_idx
-            for batch_idx, batch in enumerate(batches)
+            executor.submit(_generate_frame_batch, config, batch, int(fps)): batch
+            for batch in batches
         }
 
-        with tqdm(total=num_chunks, desc="Generating frames") as pbar:
+        with tqdm(total=num_chunks, desc="Processing chunks", unit="chunk") as pbar:
             for future in as_completed(futures):
                 start_frame_num, frame_batch = future.result()
                 frames_dict[start_frame_num] = frame_batch
-                # Update progress and show time range
-                time_at_batch = start_frame_num / fps
-                mins, secs = divmod(time_at_batch, 60)
+                # Update progress
                 pbar.update(1)
-                pbar.set_description(
-                    f"Generating frames (time: {int(mins):02d}:{secs:05.2f})"
+                # Show chunks completed and time progress
+                total_frames_done = sum(len(batch) for batch in frames_dict.values())
+                time_done = total_frames_done / fps
+                mins, secs = divmod(time_done, 60)
+                pbar.set_postfix(
+                    {
+                        "frames": f"{total_frames_done}/{total_frames}",
+                        "time": f"{int(mins):02d}:{secs:05.2f}",
+                    }
                 )
 
     # Reconstruct frames in correct order
