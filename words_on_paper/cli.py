@@ -1,5 +1,7 @@
 """Command-line interface for Words on Paper."""
 
+import time
+
 import click
 
 from words_on_paper.config.loader import load_config
@@ -27,6 +29,7 @@ def generate(config: str, output: str) -> None:
     CONFIG: Path to the configuration file (JSON or YAML)
     """
     try:
+        click.echo(f"Words on Paper - starting at {time.asctime(time.localtime())}")
         click.echo(f"Loading configuration from {config}...")
         video_config = load_config(config)
 
