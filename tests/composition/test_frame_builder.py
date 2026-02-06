@@ -2,9 +2,9 @@
 
 from PIL import Image
 
-from words_on_paper.composition.frame_builder import (
-    _calculate_position,
+from words_on_paper.composition import (
     build_frame,
+    calculate_position,
 )
 from words_on_paper.config.schema import (
     Position,
@@ -178,19 +178,19 @@ class TestBuildFrame:
         video_height = 1080
 
         # Calculate position for specific text
-        x1, y1 = _calculate_position(
+        x1, y1 = calculate_position(
             position_config, text_width, text_height, video_width, video_height, "test"
         )
 
         # Same text should produce same position (deterministic)
-        x2, y2 = _calculate_position(
+        x2, y2 = calculate_position(
             position_config, text_width, text_height, video_width, video_height, "test"
         )
         assert x1 == x2
         assert y1 == y2
 
         # Different text should produce different position
-        x3, y3 = _calculate_position(
+        x3, y3 = calculate_position(
             position_config, text_width, text_height, video_width, video_height, "other"
         )
         assert not (x1 == x3 and y1 == y3)

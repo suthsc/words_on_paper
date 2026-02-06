@@ -28,7 +28,7 @@ def render_text(
         PIL Image with rendered text
     """
     font = load_font(font_family, font_size)
-    rgb_color = _hex_to_rgb(color)
+    rgb_color = hex_to_rgb(color)
 
     if orientation == "vertical":
         return _render_vertical(text, font, rgb_color)
@@ -105,7 +105,7 @@ def _render_vertical(text: str, font, color: tuple[int, int, int]) -> Image.Imag
     return img
 
 
-def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     """
     Convert hex color to RGB tuple.
 

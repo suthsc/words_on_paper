@@ -151,7 +151,7 @@ def _render_text_layer(
             )
 
     # Calculate position BEFORE any cropping (based on scaled text dimensions)
-    x, y = _calculate_position(
+    x, y = calculate_position(
         text_seq.position,
         full_text_img.width,
         full_text_img.height,
@@ -251,7 +251,7 @@ def _apply_drop_shadow(img: Image.Image, shadow_config) -> Image.Image:
     return result
 
 
-def _calculate_position(
+def calculate_position(
     position_config,
     text_width: int,
     text_height: int,

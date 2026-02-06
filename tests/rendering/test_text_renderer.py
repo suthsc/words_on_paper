@@ -3,8 +3,8 @@
 import pytest
 from PIL import Image
 
-from words_on_paper.rendering.text_renderer import (
-    _hex_to_rgb,
+from words_on_paper.rendering import (
+    hex_to_rgb,
     render_text,
 )
 
@@ -14,30 +14,30 @@ class TestHexToRgb:
 
     def test_hex_to_rgb_black(self) -> None:
         """Test converting black hex color."""
-        assert _hex_to_rgb("#000000") == (0, 0, 0)
+        assert hex_to_rgb("#000000") == (0, 0, 0)
 
     def test_hex_to_rgb_white(self) -> None:
         """Test converting white hex color."""
-        assert _hex_to_rgb("#FFFFFF") == (255, 255, 255)
+        assert hex_to_rgb("#FFFFFF") == (255, 255, 255)
 
     def test_hex_to_rgb_red(self) -> None:
         """Test converting red hex color."""
-        assert _hex_to_rgb("#FF0000") == (255, 0, 0)
+        assert hex_to_rgb("#FF0000") == (255, 0, 0)
 
     def test_hex_to_rgb_without_hash(self) -> None:
         """Test converting hex color without hash prefix."""
-        assert _hex_to_rgb("00FF00") == (0, 255, 0)
+        assert hex_to_rgb("00FF00") == (0, 255, 0)
 
     def test_hex_to_rgb_lowercase(self) -> None:
         """Test converting lowercase hex color."""
-        assert _hex_to_rgb("#0000ff") == (0, 0, 255)
+        assert hex_to_rgb("#0000ff") == (0, 0, 255)
 
     def test_hex_to_rgb_invalid_format(self) -> None:
         """Test invalid hex color format."""
         with pytest.raises(ValueError):
-            _hex_to_rgb("#FFF")
+            hex_to_rgb("#FFF")
         with pytest.raises(ValueError):
-            _hex_to_rgb("#GGGGGG")
+            hex_to_rgb("#GGGGGG")
 
 
 class TestRenderText:
