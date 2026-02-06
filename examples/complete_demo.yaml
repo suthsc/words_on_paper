@@ -48,7 +48,7 @@ texts:
       mode: random
     font:
       family: Georgia
-      size: 24
+      size: 48
       color: "#666666"
     effects:
       typing:
@@ -73,7 +73,7 @@ texts:
       y: 300
     font:
       family: Luminari
-      size: 18
+      size: 72
       color: "#3333cc"
     effects:
       typing:
@@ -96,7 +96,7 @@ texts:
       mode: random
     font:
       family: SignPainter
-      size: 18
+      size: 140
       color: "#000000"
     effects:
       typing:

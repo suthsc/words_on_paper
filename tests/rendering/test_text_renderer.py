@@ -48,16 +48,16 @@ class TestRenderText:
         img = render_text("Hello", font_size=24)
         assert isinstance(img, Image.Image)
         assert img.mode == "RGBA"
-        assert img.width > 0
-        assert img.height > 0
+        assert img.width == 150
+        assert img.height == 75
 
     def test_render_text_vertical(self) -> None:
         """Test rendering vertical text."""
         img = render_text("Hello", font_size=24, orientation="vertical")
         assert isinstance(img, Image.Image)
         assert img.mode == "RGBA"
-        assert img.width > 0
-        assert img.height > 0
+        assert img.width == 78
+        assert img.height == 210
 
     def test_render_text_color(self) -> None:
         """Test rendering with different colors."""
