@@ -1,0 +1,62 @@
+# Simple Fade Example
+# Text appears with fade in/out effect, no typing
+
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+background:
+  type: paper
+  color: "#FFFFFF"
+  texture_intensity: 0.05
+
+texts:
+  - content: |
+      H
+      e
+      l
+      l
+      o
+      !
+    start_time: 0.0
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 1.0
+    orientation: horizontal
+    position:
+      mode: random
+    font:
+      family: Georgia
+      size: 72
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+      drop_shadow:
+        enabled: true
+        offset_x: 3
+        offset_y: 3
+        blur_radius: 4
+    z_index: 0
+  - content: "Hello!"
+    start_time: 0.0
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 1.0
+    orientation: vertical
+    position:
+      mode: random
+    font:
+      family: Georgia
+      size: 72
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+    drop_shadow:
+      enabled: true
+      offset_x: 3
+      offset_y: 3
+      blur_radius: 4
+    z_index: 0

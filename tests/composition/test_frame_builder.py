@@ -7,8 +7,12 @@ from words_on_paper.composition import (
     calculate_position,
 )
 from words_on_paper.config.schema import (
+    DropShadow,
+    Effects,
     Position,
+    ScaleEffect,
     TextSequence,
+    TypingEffect,
     VideoConfig,
 )
 
@@ -122,13 +126,10 @@ class TestBuildFrame:
                     fade_in_duration=0,
                     display_duration=5,
                     fade_out_duration=0,
-                    effects={
-                        "typing": {
-                            "enabled": True,
-                            "chars_per_second": 2,
-                        },
-                        "drop_shadow": {"enabled": False},
-                    },
+                    effects=Effects(
+                        typing=TypingEffect(enabled=True, chars_per_second=2),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
                 )
             ]
         )
@@ -170,7 +171,7 @@ class TestBuildFrame:
         assert isinstance(frame, Image.Image)
 
     def test_calculate_position_random_mode(self) -> None:
-        """Test position calculation with random mode."""
+        """Test position calculation with the random mode."""
         position_config = Position(mode="random")
         text_width = 100
         text_height = 50
@@ -211,7 +212,7 @@ class TestBuildFrame:
                     fade_in_duration=1,
                     display_duration=2,
                     fade_out_duration=1,
-                    effects={"scale": {"enabled": True, "initial_scale": 0.5}},
+                    effects=Effects(scale=ScaleEffect(enabled=True, initial_scale=0.5)),
                 )
             ]
         )
@@ -237,13 +238,11 @@ class TestBuildFrame:
                     fade_in_duration=1,
                     display_duration=2,
                     fade_out_duration=1,
-                    effects={
-                        "scale": {
-                            "enabled": True,
-                            "initial_scale": 0.5,
-                            "apply_to_fade_out": False,
-                        }
-                    },
+                    effects=Effects(
+                        scale=ScaleEffect(
+                            enabled=True, initial_scale=0.5, apply_to_fade_out=False
+                        ),
+                    ),
                 )
             ]
         )
@@ -261,13 +260,11 @@ class TestBuildFrame:
                         fade_in_duration=1,
                         display_duration=2,
                         fade_out_duration=1,
-                        effects={
-                            "scale": {
-                                "enabled": True,
-                                "initial_scale": 0.5,
-                                "easing": easing,
-                            }
-                        },
+                        effects=Effects(
+                            scale=ScaleEffect(
+                                enabled=True, initial_scale=0.5, easing=easing
+                            )
+                        ),
                     )
                 ]
             )
@@ -284,11 +281,11 @@ class TestBuildFrame:
                     fade_in_duration=0.5,
                     display_duration=2,
                     fade_out_duration=0.5,
-                    effects={
-                        "scale": {"enabled": True, "initial_scale": 0.5},
-                        "typing": {"enabled": True, "chars_per_second": 2},
-                        "drop_shadow": {"enabled": False},
-                    },
+                    effects=Effects(
+                        scale=ScaleEffect(enabled=True, initial_scale=0.5),
+                        typing=TypingEffect(enabled=True, chars_per_second=2),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
                 )
             ]
         )

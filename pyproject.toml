@@ -7,7 +7,7 @@ name = "words-on-paper"
 version = "0.1.0"
 description = "Video generator creating animated text on paper-like backgrounds using moviepy and PIL"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Your Name", email = "your.email@example.com"},
@@ -26,7 +26,7 @@ classifiers = [
 
 dependencies = [
     "moviepy>=1.0.3",
-    "pillow>=10.0.0",
+    "pillow>=12.1.0",
     "pydantic>=2.0.0",
     "pyyaml>=6.0",
     "click>=8.0.0",

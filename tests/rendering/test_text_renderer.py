@@ -25,7 +25,7 @@ class TestHexToRgb:
         assert hex_to_rgb("#FF0000") == (255, 0, 0)
 
     def test_hex_to_rgb_without_hash(self) -> None:
-        """Test converting hex color without hash prefix."""
+        """Test converting hex color without a hash prefix."""
         assert hex_to_rgb("00FF00") == (0, 255, 0)
 
     def test_hex_to_rgb_lowercase(self) -> None:
@@ -56,8 +56,8 @@ class TestRenderText:
         img = render_text("Hello", font_size=24, orientation="vertical")
         assert isinstance(img, Image.Image)
         assert img.mode == "RGBA"
-        assert img.width == 78
-        assert img.height == 210
+        assert img.width == 72
+        assert img.height == 188
 
     def test_render_text_color(self) -> None:
         """Test rendering with different colors."""
@@ -69,7 +69,7 @@ class TestRenderText:
         """Test rendering with different font sizes."""
         img_small = render_text("Test", font_family="Liberation", font_size=12)
         img_large = render_text("Test", font_family="Liberation", font_size=48)
-        # When using default font, sizes may not differ, so check that at least
+        # When using the default font, sizes may not differ, so check that at least
         # we can render both successfully
         assert img_small.mode == "RGBA"
         assert img_large.mode == "RGBA"

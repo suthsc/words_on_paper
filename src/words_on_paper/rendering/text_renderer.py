@@ -64,43 +64,22 @@ def _render_vertical(text: str, font, color: tuple[int, int, int]) -> Image.Imag
     dummy_img = Image.new("RGBA", (1, 1))
     dummy_draw = ImageDraw.Draw(dummy_img)
 
-    # Calculate width (width of the widest character)
-    char_widths = []
-    for char in text:
-        bbox = dummy_draw.textbbox((0, 0), char, font=font)
-        char_widths.append(bbox[2] - bbox[0])
-
-    max_width = max(char_widths) if char_widths else 0
-
-    # Calculate height (sum of all character heights with padding)
-    char_spacing = 15  # Vertical spacing between characters
-    char_height: int | None = None
-    total_height: int = 0
-    for char in text:
-        bbox = dummy_draw.textbbox((0, 0), char, font=font)
-        h = int(bbox[3] - bbox[1])
-        if char_height is None:
-            char_height = h
-        total_height += h + char_spacing
-
-    padding = 30  # Consistent padding for descenders
-    width = int(max_width + 2 * padding)
-    height = int(total_height + 2 * padding)
+    bbox = dummy_draw.textbbox((0, 0), text, font=font, direction="ttb", align="center")
+    padding = 30  # Increased padding for descenders
+    width = int(bbox[2] - bbox[0] + 2 * padding)
+    height = int(bbox[3] - bbox[1] + 2 * padding)
 
     # Create the image
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Draw characters vertically, centered horizontally
-    char_spacing = 15  # Vertical spacing between characters
-    y_pos = padding
-    for char in text:
-        bbox = dummy_draw.textbbox((0, 0), char, font=font)
-        char_w = bbox[2] - bbox[0]
-        char_h = bbox[3] - bbox[1]
-        # Center character horizontally within max_width
-        x_offset = padding + (max_width - char_w) // 2
-        draw.text((x_offset, y_pos), char, font=font, fill=(*color, 255))
-        y_pos += char_h + char_spacing
+    draw.text(
+        (padding, padding),
+        text,
+        font=font,
+        fill=(*color, 255),
+        direction="ttb",
+        align="center",
+    )
 
     return img
