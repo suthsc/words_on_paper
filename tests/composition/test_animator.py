@@ -84,22 +84,22 @@ class TestCalculateVisibleChars:
     def test_visible_chars_typing_start(self) -> None:
         """Test visible chars at typing start."""
         visible = calculate_visible_chars(1, 0, 1, 5, 1)
-        assert visible == 0
+        assert visible == 1
 
     def test_visible_chars_typing_partial(self) -> None:
         """Test visible chars during typing."""
         visible = calculate_visible_chars(1.5, 0, 1, 5, 1)
-        assert visible == 0  # 0.5 seconds * 1 char/sec = 0 chars (int)
+        assert visible == 1
 
     def test_visible_chars_one_per_second(self) -> None:
         """Test typing one character per second."""
         visible = calculate_visible_chars(2, 0, 1, 5, 1)
-        assert visible == 1
+        assert visible == 2
 
     def test_visible_chars_multiple(self) -> None:
         """Test multiple characters visible."""
         visible = calculate_visible_chars(4, 0, 1, 5, 1)
-        assert visible == 3
+        assert visible == 4
 
     def test_visible_chars_all_visible(self) -> None:
         """Test all characters visible."""
@@ -109,7 +109,7 @@ class TestCalculateVisibleChars:
     def test_visible_chars_fast_typing(self) -> None:
         """Test fast typing speed."""
         visible = calculate_visible_chars(1.5, 0, 1, 10, 5)  # 5 chars/sec
-        assert visible == 2
+        assert visible == 7
 
     def test_visible_chars_capped_at_total(self) -> None:
         """Test visible chars capped at total."""

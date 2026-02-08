@@ -1,0 +1,140 @@
+# Simple Fade Example
+# Text appears with fade in/out effect, no typing
+
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+background:
+  type: paper
+  color: "#FFFFFF"
+  texture_intensity: 0.05
+
+texts:
+  - content: "W"
+    start_time: 0.5
+    fade_in_duration: 1.0
+    display_duration: 1.0
+    fade_out_duration: 0
+    orientation: horizontal
+    position:
+      mode: center
+    font:
+      family: Georgia
+      size: 12
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+    drop_shadow:
+      enabled: true
+      offset_x: 3
+      offset_y: 3
+      blur_radius: 4
+    z_index: 0
+  - content: "W"
+    start_time: 1.5
+    fade_in_duration: 0
+    display_duration: 1.0
+    fade_out_duration: 0
+    orientation: horizontal
+    position:
+      mode: center
+    font:
+      family: Georgia
+      size: 18
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+    drop_shadow:
+      enabled: true
+      offset_x: 3
+      offset_y: 3
+      blur_radius: 4
+    z_index: 0
+  - content: "W"
+    start_time: 2.5
+    fade_in_duration: 0
+    display_duration: 1.0
+    fade_out_duration: 0
+    orientation: horizontal
+    position:
+      mode: center
+    font:
+      family: Georgia
+      size: 24
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+    drop_shadow:
+      enabled: true
+      offset_x: 3
+      offset_y: 3
+      blur_radius: 4
+    z_index: 0
+  - content: "W"
+    start_time: 3.5
+    fade_in_duration: 0
+    display_duration: 1.0
+    fade_out_duration: 0
+    orientation: horizontal
+    position:
+      mode: center
+    font:
+      family: Georgia
+      size: 30
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+    drop_shadow:
+      enabled: true
+      offset_x: 3
+      offset_y: 3
+      blur_radius: 4
+    z_index: 0
+  - content: "W"
+    start_time: 4.5
+    fade_in_duration: 0
+    display_duration: 1.0
+    fade_out_duration: 0
+    orientation: horizontal
+    position:
+      mode: center
+    font:
+      family: Georgia
+      size: 36
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+    drop_shadow:
+      enabled: true
+      offset_x: 3
+      offset_y: 3
+      blur_radius: 4
+    z_index: 0
+  - content: "W"
+    start_time: 5.5
+    fade_in_duration: 0
+    display_duration: 1.0
+    fade_out_duration: 1.0
+    orientation: horizontal
+    position:
+      mode: center
+    font:
+      family: Georgia
+      size: 42
+      color: "#000000"
+    effects:
+      typing:
+        enabled: false
+    drop_shadow:
+      enabled: true
+      offset_x: 3
+      offset_y: 3
+      blur_radius: 4
+    z_index: 0

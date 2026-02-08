@@ -2,8 +2,8 @@
 # Text appears character by character
 
 video:
-  width: 1920
-  height: 1080
+  width: 800
+  height: 600
   fps: 30
 
 background:
@@ -14,17 +14,19 @@ background:
 texts:
   - content: "Typing text appears like this"
     start_time: 0.0
-    fade_in_duration: 0.5
-    display_duration: 3.0
-    fade_out_duration: 0.5
+    fade_in_duration: 1.0
+    display_duration: 4.5
+    fade_out_duration: 1.0
     orientation: horizontal
     position:
-      mode: center
+      mode: random
     font:
-      family: Arial
+      family: Helvetica
       size: 64
       color: "#333333"
     effects:
+      scale:
+        enabled: true
       typing:
         enabled: true
         chars_per_second: 5

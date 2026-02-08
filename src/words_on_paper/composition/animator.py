@@ -66,13 +66,10 @@ def calculate_visible_chars(
     Returns:
         Number of visible characters (0 to total_chars)
     """
-    # Typing starts after fade in
-    typing_start = start_time + fade_in_duration
-
-    if current_time < typing_start:
+    if current_time < start_time:
         return 0
 
-    elapsed = current_time - typing_start
+    elapsed = current_time - start_time
     visible = int(elapsed * chars_per_second)
 
     return min(visible, total_chars)
@@ -80,7 +77,7 @@ def calculate_visible_chars(
 
 def _apply_easing(t: float, easing: str) -> float:
     """
-    Apply easing curve to linear progress [0, 1].
+    Apply the easing curve to linear progress [0, 1].
 
     Args:
         t: Linear progress (0.0 to 1.0)
@@ -117,7 +114,7 @@ def calculate_scale_factor(
     easing: str = "ease_in_out",
 ) -> float:
     """
-    Calculate scale factor for depth effect during fade animations.
+    Calculate the scale factor for depth effect during fade animations.
 
     Args:
         current_time: Current time in seconds

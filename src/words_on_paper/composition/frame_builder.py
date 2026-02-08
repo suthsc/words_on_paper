@@ -164,16 +164,12 @@ def _render_text_layer(
     text_img = full_text_img
     if text_seq.effects.typing.enabled and visible_char_count < len(text_seq.content):
         # Render visible text to get its dimensions
-        visible_text_img = render_text(
+        text_img = render_text(
             text_seq.content[:visible_char_count],
             text_seq.font.family,
             text_seq.font.size,
             text_seq.font.color,
             text_seq.orientation,
-        )
-        # Crop the full text image to show only visible portion
-        text_img = full_text_img.crop(
-            (0, 0, visible_text_img.width, visible_text_img.height)
         )
 
     # Apply opacity

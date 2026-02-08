@@ -12,7 +12,7 @@ background:
   texture_intensity: 0.05
 
 texts:
-  # Opening text with typing effect
+  # Opening text with a typing effect
   - content: "Words on Paper"
     start_time: 0.0
     fade_in_duration: 0.5
@@ -22,7 +22,7 @@ texts:
     position:
       mode: random
     font:
-      family: "Arial Black"
+      family: "Times New Roman Bold"
       size: 36
       color: "#1a1a1a"
     effects:
