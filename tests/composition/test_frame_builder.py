@@ -7,6 +7,7 @@ from words_on_paper.composition import (
     calculate_position,
 )
 from words_on_paper.config.schema import (
+    DepthOfFieldEffect,
     DropShadow,
     Effects,
     Position,
@@ -290,4 +291,140 @@ class TestBuildFrame:
             ]
         )
         frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_with_depth_of_field(self) -> None:
+        """Test frame building with depth-of-field effect enabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="DOF Text",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=5,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=60,
+                            outward_frames=30,
+                        )
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+        assert frame.mode == "RGB"
+
+    def test_depth_of_field_inward_phase(self) -> None:
+        """Test depth-of-field inward phase (approaching focal plane)."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Approaching",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=3,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                            initial_distance=0.8,
+                        )
+                    ),
+                )
+            ]
+        )
+        # Early in inward phase - should have blur
+        frame_early = build_frame(config, 0.3)
+        assert isinstance(frame_early, Image.Image)
+
+        # Late in inward phase - blur reduces as approaching focal plane
+        frame_late = build_frame(config, 0.9)
+        assert isinstance(frame_late, Image.Image)
+
+    def test_depth_of_field_crisp_phase(self) -> None:
+        """Test depth-of-field crisp phase (at focal plane)."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="In Focus",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=3,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                        )
+                    ),
+                )
+            ]
+        )
+        # During crisp phase - minimal blur
+        frame = build_frame(config, 1.2)
+        assert isinstance(frame, Image.Image)
+
+    def test_depth_of_field_outward_phase(self) -> None:
+        """Test depth-of-field outward phase (receding from focal plane)."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Receding",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=3,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                        )
+                    ),
+                )
+            ]
+        )
+        # Early in outward phase - blur increases as receding
+        frame_early = build_frame(config, 2.1)
+        assert isinstance(frame_early, Image.Image)
+
+        # Late in outward phase - blur reaches maximum
+        frame_late = build_frame(config, 2.95)
+        assert isinstance(frame_late, Image.Image)
+
+    def test_depth_of_field_with_other_effects(self) -> None:
+        """Test depth-of-field combined with other effects."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Complex Effects",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        scale=ScaleEffect(enabled=True, initial_scale=0.8),
+                        drop_shadow=DropShadow(enabled=True),
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                            blur_max_radius=20,
+                        ),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
         assert isinstance(frame, Image.Image)

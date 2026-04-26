@@ -31,6 +31,20 @@ class Font(BaseModel):
     color: str = "#000000"
 
 
+class DepthOfFieldEffect(BaseModel):
+    """Depth-of-field focal plane effect."""
+
+    enabled: bool = False
+    initial_distance: float = Field(default=0.5, ge=0.0, le=1.0)
+    inward_frames: int = Field(default=30, ge=0)
+    crisp_frames: int = Field(default=60, ge=0)
+    outward_frames: int = Field(default=30, ge=0)
+    blur_sigma: float = Field(default=0.2, gt=0.0, le=1.0)
+    blur_max_radius: int = Field(default=25, ge=0)
+    alpha_sigma: float = Field(default=0.2, gt=0.0, le=1.0)
+    alpha_min: float = Field(default=0.3, ge=0.0, lt=1.0)
+
+
 class TypingEffect(BaseModel):
     """Configuration for typing/reveal effect."""
 
@@ -63,6 +77,7 @@ class Effects(BaseModel):
     typing: TypingEffect = Field(default_factory=TypingEffect)
     drop_shadow: DropShadow = Field(default_factory=DropShadow)
     scale: ScaleEffect = Field(default_factory=ScaleEffect)
+    depth_of_field: DepthOfFieldEffect = Field(default_factory=DepthOfFieldEffect)
 
 
 class TextSequence(BaseModel):

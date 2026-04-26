@@ -77,18 +77,18 @@ def _generate_noise(width: int, height: int, intensity: float) -> np.ndarray:
     # Use simple Perlin-like noise by downsampling and upsampling
     scale = max(1, int(50 * (1 - intensity)))
 
-    # Create random noise at smaller scale
-    small_width = max(1, width // scale)
-    small_height = max(1, height // scale)
+    # Create random noise at smaller scale (use ceil to ensure upsampled result is large enough)
+    import math
+
+    small_width = max(1, math.ceil(width / scale))
+    small_height = max(1, math.ceil(height / scale))
 
     noise_small = np.random.uniform(-20, 20, (small_height, small_width, 3))
 
-    # Upsample to full size using nearest neighbor
-    noise_full = np.zeros((height, width, 3))
-    for y in range(height):
-        for x in range(width):
-            src_y = min(y // scale, small_height - 1)
-            src_x = min(x // scale, small_width - 1)
-            noise_full[y, x] = noise_small[src_y, src_x]
+    # Upsample to full size using vectorized repeat operations (10-100x faster than loops)
+    noise_full = np.repeat(np.repeat(noise_small, scale, axis=0), scale, axis=1)
+
+    # Trim to exact dimensions
+    noise_full = noise_full[:height, :width, :]
 
     return noise_full * intensity

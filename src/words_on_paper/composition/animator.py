@@ -1,5 +1,59 @@
 """Animation calculations."""
 
+from __future__ import annotations
+
+import math
+
+
+def _get_animation_phase(
+    current_time: float,
+    start_time: float,
+    fade_in_duration: float,
+    display_duration: float,
+    fade_out_duration: float,
+) -> tuple[str, float]:
+    """
+    Determine animation phase and progress within phase.
+
+    Args:
+        current_time: Current time in seconds
+        start_time: When animation starts
+        fade_in_duration: Duration of fade-in phase
+        display_duration: Duration of display (full) phase
+        fade_out_duration: Duration of fade-out phase
+
+    Returns:
+        (phase, progress) tuple where:
+        - phase is one of: "before", "fade_in", "display", "fade_out", "after"
+        - progress is 0.0-1.0 within the phase (0.0 for before/after)
+    """
+    if current_time < start_time:
+        return "before", 0.0
+
+    fade_in_end = start_time + fade_in_duration
+    if current_time < fade_in_end:
+        progress = (
+            (current_time - start_time) / fade_in_duration
+            if fade_in_duration > 0
+            else 1.0
+        )
+        return "fade_in", min(1.0, max(0.0, progress))
+
+    display_end = fade_in_end + display_duration
+    if current_time < display_end:
+        return "display", 1.0
+
+    fade_out_end = display_end + fade_out_duration
+    if current_time < fade_out_end:
+        progress = (
+            (current_time - display_end) / fade_out_duration
+            if fade_out_duration > 0
+            else 1.0
+        )
+        return "fade_out", min(1.0, max(0.0, progress))
+
+    return "after", 0.0
+
 
 def calculate_text_opacity(
     current_time: float,
@@ -21,29 +75,20 @@ def calculate_text_opacity(
     Returns:
         Opacity value from 0.0 to 1.0
     """
-    # Before start time
-    if current_time < start_time:
+    phase, progress = _get_animation_phase(
+        current_time, start_time, fade_in_duration, display_duration, fade_out_duration
+    )
+
+    if phase == "before":
         return 0.0
-
-    # Fade in phase
-    fade_in_end = start_time + fade_in_duration
-    if current_time < fade_in_end:
-        progress = (current_time - start_time) / fade_in_duration
-        return min(1.0, max(0.0, progress))
-
-    # Display phase
-    display_end = fade_in_end + display_duration
-    if current_time < display_end:
+    elif phase == "fade_in":
+        return progress
+    elif phase == "display":
         return 1.0
-
-    # Fade out phase
-    fade_out_end = display_end + fade_out_duration
-    if current_time < fade_out_end:
-        progress = (current_time - display_end) / fade_out_duration
-        return max(0.0, 1.0 - progress)
-
-    # After fade out
-    return 0.0
+    elif phase == "fade_out":
+        return 1.0 - progress
+    else:  # "after"
+        return 0.0
 
 
 def calculate_visible_chars(
@@ -129,28 +174,96 @@ def calculate_scale_factor(
     Returns:
         Scale factor (initial_scale during fade, 1.0 during display)
     """
-    fade_in_end = start_time + fade_in_duration
-    fade_out_start = fade_in_end + display_duration
-    fade_out_end = fade_out_start + fade_out_duration
+    phase, progress = _get_animation_phase(
+        current_time, start_time, fade_in_duration, display_duration, fade_out_duration
+    )
 
-    # Before animation or after animation
-    if current_time < start_time or current_time >= fade_out_end:
+    if phase == "before" or phase == "after":
         return 1.0
-
-    # Fade-in phase: scale from initial_scale to 1.0
-    if current_time < fade_in_end:
-        progress = (current_time - start_time) / fade_in_duration
-        progress = _apply_easing(progress, easing)
-        return initial_scale + (1.0 - initial_scale) * progress
-
-    # Display phase: full scale
-    if current_time < fade_out_start:
+    elif phase == "fade_in":
+        eased_progress = _apply_easing(progress, easing)
+        return initial_scale + (1.0 - initial_scale) * eased_progress
+    elif phase == "display":
         return 1.0
-
-    # Fade-out phase: scale from 1.0 to initial_scale (if enabled)
-    if apply_to_fade_out:
-        progress = (current_time - fade_out_start) / fade_out_duration
-        progress = _apply_easing(progress, easing)
-        return 1.0 - (1.0 - initial_scale) * progress
+    elif phase == "fade_out":
+        if apply_to_fade_out:
+            eased_progress = _apply_easing(progress, easing)
+            return 1.0 - (1.0 - initial_scale) * eased_progress
+        else:
+            return 1.0
 
     return 1.0
+
+
+def calculate_depth_of_field(
+    current_time: float,
+    start_time: float,
+    inward_frames: int,
+    crisp_frames: int,
+    outward_frames: int,
+    initial_distance: float,
+    blur_sigma: float,
+    blur_max_radius: int,
+    alpha_sigma: float,
+    alpha_min: float,
+    fps: float = 30.0,
+) -> tuple[float, int, float]:
+    """
+    Calculate depth-of-field effect (blur radius and alpha).
+
+    Args:
+        current_time: Current time in seconds
+        start_time: When animation starts
+        inward_frames: Frames for approach phase
+        crisp_frames: Frames at focus
+        outward_frames: Frames for recession phase
+        initial_distance: Starting distance from focal plane (0.0-1.0)
+        blur_sigma: Gaussian sigma for blur
+        blur_max_radius: Maximum blur radius in pixels
+        alpha_sigma: Gaussian sigma for alpha
+        alpha_min: Minimum alpha when out of focus
+        fps: Frames per second (for time->frame conversion)
+
+    Returns:
+        (distance, blur_radius, alpha) tuple
+    """
+    inward_duration = inward_frames / fps
+    crisp_duration = crisp_frames / fps
+    outward_duration = outward_frames / fps
+    total_duration = inward_duration + crisp_duration + outward_duration
+
+    elapsed = current_time - start_time
+
+    # Before animation starts
+    if elapsed < 0:
+        return initial_distance, 0, alpha_min
+
+    # After animation ends
+    if elapsed >= total_duration:
+        return 1.0, 0, alpha_min
+
+    # Determine phase and calculate distance
+    if elapsed < inward_duration:
+        # Inward phase: distance goes from initial_distance to ~0
+        progress = elapsed / inward_duration
+        distance = initial_distance * (1.0 - progress)
+    elif elapsed < inward_duration + crisp_duration:
+        # Crisp phase: stay near focus
+        distance = 0.05
+    else:
+        # Outward phase: distance goes from ~0 to 1.0
+        outward_progress = (
+            elapsed - inward_duration - crisp_duration
+        ) / outward_duration
+        distance = outward_progress
+
+    # Calculate blur and alpha from Gaussian curves centered at focal plane (distance=0)
+    # At distance d, Gaussian = exp(-(d^2) / (2*sigma^2))
+    blur_gaussian = math.exp(-((distance**2) / (2 * blur_sigma**2)))
+    alpha_gaussian = math.exp(-((distance**2) / (2 * alpha_sigma**2)))
+
+    # Map Gaussian values to blur radius and alpha
+    blur_radius = int(blur_gaussian * blur_max_radius)
+    alpha = alpha_min + (1.0 - alpha_min) * alpha_gaussian
+
+    return distance, blur_radius, alpha

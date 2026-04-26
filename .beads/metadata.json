@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "words_on_paper",
+  "project_id": "a46e2f5f-422a-4f42-ba2b-74f644a1ff19"
+}
