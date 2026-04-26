@@ -11,6 +11,7 @@ from PIL.Image import Resampling
 from words_on_paper.background import generate_background
 from words_on_paper.composition.animator import (
     calculate_depth_of_field,
+    calculate_letter_spacing,
     calculate_scale_factor,
     calculate_text_opacity,
     calculate_visible_chars,
@@ -122,12 +123,28 @@ def _render_text_layer(
     if text_seq.effects.typing.enabled and visible_char_count < len(text_seq.content):
         text_to_render = text_seq.content[:visible_char_count]
 
+    # Calculate letter spacing effect
+    letter_spacing = 1.0
+    if text_seq.effects.letter_spacing.enabled:
+        letter_spacing = calculate_letter_spacing(
+            current_time=current_time,
+            start_time=text_seq.start_time,
+            fade_in_duration=text_seq.fade_in_duration,
+            display_duration=text_seq.display_duration,
+            fade_out_duration=text_seq.fade_out_duration,
+            initial_spacing=text_seq.effects.letter_spacing.initial_spacing,
+            target_spacing=text_seq.effects.letter_spacing.target_spacing,
+            apply_to_fade_out=text_seq.effects.letter_spacing.apply_to_fade_out,
+            easing=text_seq.effects.letter_spacing.easing,
+        )
+
     # Get dimensions of rendered text (for accurate positioning)
     text_width, text_height = get_text_dimensions(
         text_to_render,
         text_seq.font.family,
         text_seq.font.size,
         text_seq.orientation,
+        letter_spacing=letter_spacing,
     )
 
     # Render the text
@@ -137,6 +154,7 @@ def _render_text_layer(
         text_seq.font.size,
         text_seq.font.color,
         text_seq.orientation,
+        letter_spacing=letter_spacing,
     )
 
     # Calculate and apply scale effect

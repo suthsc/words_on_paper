@@ -10,6 +10,7 @@ from words_on_paper.config.schema import (
     DepthOfFieldEffect,
     DropShadow,
     Effects,
+    LetterSpacingEffect,
     Position,
     ScaleEffect,
     TextSequence,
@@ -427,4 +428,161 @@ class TestBuildFrame:
             ]
         )
         frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_with_letter_spacing_effect(self) -> None:
+        """Test frame with letter-spacing effect enabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Hello World",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            apply_to_fade_out=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+        assert frame.size == (1920, 1080)
+
+    def test_build_frame_letter_spacing_fade_in_phase(self) -> None:
+        """Test letter spacing during fade-in phase."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Spacing",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.5,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 0.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_display_phase(self) -> None:
+        """Test letter spacing during display phase."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Display",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.6,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_fade_out_phase(self) -> None:
+        """Test letter spacing during fade-out phase."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Fade Out",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            apply_to_fade_out=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 3.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_with_depth_of_field(self) -> None:
+        """Test letter spacing combined with depth-of-field effect."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Perspective",
+                    start_time=0,
+                    fade_in_duration=2,
+                    display_duration=2,
+                    fade_out_duration=2,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                        ),
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            initial_distance=0.8,
+                            inward_frames=30,
+                            crisp_frames=60,
+                            outward_frames=30,
+                            blur_sigma=0.2,
+                            blur_max_radius=25,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_vertical_text(self) -> None:
+        """Test letter spacing with vertical text."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="ABC",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    orientation="vertical",
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.8,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
         assert isinstance(frame, Image.Image)

@@ -195,6 +195,55 @@ def calculate_scale_factor(
     return 1.0
 
 
+def calculate_letter_spacing(
+    current_time: float,
+    start_time: float,
+    fade_in_duration: float,
+    display_duration: float,
+    fade_out_duration: float,
+    initial_spacing: float,
+    target_spacing: float,
+    apply_to_fade_out: bool,
+    easing: str = "ease_in_out",
+) -> float:
+    """
+    Calculate the letter spacing multiplier for perspective effect during fade animations.
+
+    Args:
+        current_time: Current time in seconds
+        start_time: When text animation starts
+        fade_in_duration: Duration of fade in
+        display_duration: Duration at full display
+        fade_out_duration: Duration of fade out
+        initial_spacing: Starting/ending spacing multiplier (e.g., 1.0 for normal)
+        target_spacing: Target spacing multiplier during display (e.g., 0.7 for closer)
+        apply_to_fade_out: If True, returns to initial_spacing during fade-out
+        easing: Easing function type
+
+    Returns:
+        Spacing multiplier (initial_spacing during fade, target_spacing during display)
+    """
+    phase, progress = _get_animation_phase(
+        current_time, start_time, fade_in_duration, display_duration, fade_out_duration
+    )
+
+    if phase == "before" or phase == "after":
+        return 1.0
+    elif phase == "fade_in":
+        eased_progress = _apply_easing(progress, easing)
+        return initial_spacing + (target_spacing - initial_spacing) * eased_progress
+    elif phase == "display":
+        return target_spacing
+    elif phase == "fade_out":
+        if apply_to_fade_out:
+            eased_progress = _apply_easing(progress, easing)
+            return target_spacing + (initial_spacing - target_spacing) * eased_progress
+        else:
+            return target_spacing
+
+    return 1.0
+
+
 def calculate_depth_of_field(
     current_time: float,
     start_time: float,
