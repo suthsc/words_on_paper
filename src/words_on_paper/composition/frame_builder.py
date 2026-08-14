@@ -150,6 +150,22 @@ def _render_text_layer(
         center_spacing=center_spacing,
     )
 
+    # Dimensions of the fully-revealed text, used for position calculation so
+    # a typing effect doesn't shift a width-dependent position (e.g. centered)
+    # as characters are typed in.
+    full_text_width, full_text_height = (
+        (text_width, text_height)
+        if text_to_render == text_seq.content
+        else get_text_dimensions(
+            text_seq.content,
+            text_seq.font.family,
+            text_seq.font.size,
+            text_seq.orientation,
+            letter_spacing=letter_spacing,
+            center_spacing=center_spacing,
+        )
+    )
+
     # Render the text
     text_img = render_text(
         text_to_render,
@@ -188,12 +204,16 @@ def _render_text_layer(
             # Update dimensions to match scaled image
             text_width = text_img.width
             text_height = text_img.height
+            full_text_width = int(full_text_width * scale_factor)
+            full_text_height = int(full_text_height * scale_factor)
 
-    # Calculate position based on actual rendered text dimensions
+    # Calculate position based on the fully-revealed text's dimensions, so a
+    # width-dependent position (e.g. centered) stays stable across typing
+    # frames instead of drifting as text_to_render grows.
     x, y = calculate_position(
         text_seq.position,
-        text_width,
-        text_height,
+        full_text_width,
+        full_text_height,
         video_width,
         video_height,
         text_seq.content,
@@ -323,6 +343,25 @@ def _apply_depth_of_field_blur(
     return img
 
 
+def _clamp_to_frame(
+    x: int,
+    y: int,
+    text_width: int,
+    text_height: int,
+    video_width: int,
+    video_height: int,
+) -> tuple[int, int]:
+    """
+    Keep a text placement fully within the frame when it fits, pinning it to
+    the near edge instead of letting a configured x/y anchor run text off
+    one side. Oversized text (wider/taller than the frame) is pinned to 0
+    rather than clamped, since it can't fit either way.
+    """
+    x = max(0, min(x, video_width - text_width))
+    y = max(0, min(y, video_height - text_height))
+    return x, y
+
+
 def calculate_position(
     position_config,
     text_width: int,
@@ -348,9 +387,11 @@ def calculate_position(
     if position_config.mode == "absolute":
         x = int(position_config.x or 0)
         y = int(position_config.y or 0)
+        x, y = _clamp_to_frame(x, y, text_width, text_height, video_width, video_height)
     elif position_config.mode == "relative":
         x = int(video_width * (position_config.x or 0))
         y = int(video_height * (position_config.y or 0))
+        x, y = _clamp_to_frame(x, y, text_width, text_height, video_width, video_height)
     elif position_config.mode == "random":
         # Use text content for deterministic random positioning
         rng = random.Random(text_content)
