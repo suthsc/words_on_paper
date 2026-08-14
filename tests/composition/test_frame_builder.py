@@ -204,6 +204,55 @@ class TestBuildFrame:
         assert y1 >= int(video_height * 0.2)
         assert y1 <= int(video_height * 0.8 - text_height)
 
+    def test_calculate_position_relative_mode_clamps_to_frame(self) -> None:
+        """A relative x/y anchor that would push text off the frame edge is
+        pulled back in so the whole text stays visible."""
+        position_config = Position(mode="relative", x=0.65, y=0.5)
+        text_width = 1426  # wide text anchored near the right edge
+        text_height = 60
+        video_width = 1920
+        video_height = 1080
+
+        x, y = calculate_position(
+            position_config, text_width, text_height, video_width, video_height
+        )
+
+        assert x + text_width <= video_width
+        assert y + text_height <= video_height
+        assert x >= 0
+        assert y >= 0
+
+    def test_calculate_position_absolute_mode_clamps_to_frame(self) -> None:
+        """An absolute x/y anchor too close to the far edge is pulled back
+        in so the whole text stays visible."""
+        position_config = Position(mode="absolute", x=1800, y=1000)
+        text_width = 400
+        text_height = 200
+        video_width = 1920
+        video_height = 1080
+
+        x, y = calculate_position(
+            position_config, text_width, text_height, video_width, video_height
+        )
+
+        assert x + text_width <= video_width
+        assert y + text_height <= video_height
+
+    def test_calculate_position_clamps_oversized_text_to_origin(self) -> None:
+        """Text wider/taller than the frame can't fully fit either way, so
+        it's pinned to the near edge instead of the configured anchor."""
+        position_config = Position(mode="relative", x=0.9, y=0.9)
+        text_width = 3000  # wider than the frame
+        text_height = 60
+        video_width = 1920
+        video_height = 1080
+
+        x, y = calculate_position(
+            position_config, text_width, text_height, video_width, video_height
+        )
+
+        assert x == 0
+
     def test_build_frame_with_scale_effect(self) -> None:
         """Test frame building with scale effect enabled."""
         config = VideoConfig(

@@ -323,6 +323,25 @@ def _apply_depth_of_field_blur(
     return img
 
 
+def _clamp_to_frame(
+    x: int,
+    y: int,
+    text_width: int,
+    text_height: int,
+    video_width: int,
+    video_height: int,
+) -> tuple[int, int]:
+    """
+    Keep a text placement fully within the frame when it fits, pinning it to
+    the near edge instead of letting a configured x/y anchor run text off
+    one side. Oversized text (wider/taller than the frame) is pinned to 0
+    rather than clamped, since it can't fit either way.
+    """
+    x = max(0, min(x, video_width - text_width))
+    y = max(0, min(y, video_height - text_height))
+    return x, y
+
+
 def calculate_position(
     position_config,
     text_width: int,
@@ -348,9 +367,11 @@ def calculate_position(
     if position_config.mode == "absolute":
         x = int(position_config.x or 0)
         y = int(position_config.y or 0)
+        x, y = _clamp_to_frame(x, y, text_width, text_height, video_width, video_height)
     elif position_config.mode == "relative":
         x = int(video_width * (position_config.x or 0))
         y = int(video_height * (position_config.y or 0))
+        x, y = _clamp_to_frame(x, y, text_width, text_height, video_width, video_height)
     elif position_config.mode == "random":
         # Use text content for deterministic random positioning
         rng = random.Random(text_content)
