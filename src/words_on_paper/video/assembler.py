@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from collections import deque
+from collections.abc import Generator, Iterator
+from concurrent.futures import Future, ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
-from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+from moviepy.video.VideoClip import VideoClip
 from tqdm import tqdm
 
 from words_on_paper.composition.frame_builder import build_frame
 from words_on_paper.config.schema import VideoConfig
 from words_on_paper.utils.timing import calculate_frame_count
+
+CHUNK_SIZE = 100  # Frames generated per worker task
+MAX_WORKERS = 8
 
 
 def _generate_frame_batch(
@@ -46,6 +51,89 @@ def _generate_frame_batch(
     return batch_start, frames
 
 
+def _stream_frames(
+    config: VideoConfig,
+    total_frames: int,
+    fps: int,
+    chunk_size: int = CHUNK_SIZE,
+    max_workers: int = MAX_WORKERS,
+    progress: tqdm | None = None,
+) -> Generator[np.ndarray, None, None]:
+    """
+    Yield video frames in order using a bounded-ahead worker pool.
+
+    At most `max_workers` chunks are ever in flight at once (submitted but
+    not yet consumed), so peak resident frame count stays roughly constant
+    at ~max_workers * chunk_size regardless of total video length, instead
+    of the whole video's frames being materialized at once.
+    """
+    batches = [
+        list(range(start, min(start + chunk_size, total_frames)))
+        for start in range(0, total_frames, chunk_size)
+    ]
+
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        pending: deque[Future[tuple[int, list[np.ndarray]]]] = deque()
+        next_batch_idx = 0
+
+        def submit_next() -> None:
+            nonlocal next_batch_idx
+            if next_batch_idx < len(batches):
+                pending.append(
+                    executor.submit(
+                        _generate_frame_batch, config, batches[next_batch_idx], fps
+                    )
+                )
+                next_batch_idx += 1
+
+        for _ in range(min(max_workers, len(batches))):
+            submit_next()
+
+        frames_done = 0
+        while pending:
+            _, frame_batch = pending.popleft().result()
+            submit_next()
+
+            frames_done += len(frame_batch)
+            if progress is not None:
+                progress.update(1)
+                time_done = frames_done / fps
+                mins, secs = divmod(time_done, 60)
+                progress.set_postfix(
+                    {
+                        "frames": f"{frames_done}/{total_frames}",
+                        "time": f"{int(mins):02d}:{secs:05.2f}",
+                    }
+                )
+
+            yield from frame_batch
+
+
+class _SequentialFrameFeeder:
+    """
+    Adapts a pull-based, in-order frame iterator to MoviePy's make_frame(t).
+
+    Relies on MoviePy calling make_frame with a strictly non-decreasing t
+    during write_videofile (verified against moviepy 1.0.3's
+    Clip.iter_frames), so frames can be advanced forward-only without
+    buffering frames the caller has already moved past.
+    """
+
+    def __init__(self, frames: Iterator[np.ndarray], fps: float) -> None:
+        self._frames = frames
+        self._fps = fps
+        self._next_index = 0
+        self._current: np.ndarray | None = None
+
+    def __call__(self, t: float) -> np.ndarray:
+        index = round(t * self._fps)
+        while self._next_index <= index:
+            self._current = next(self._frames)
+            self._next_index += 1
+        assert self._current is not None
+        return self._current
+
+
 def generate_video(config: VideoConfig, output_path: str | Path) -> None:
     """
     Generate a video from configuration.
@@ -73,54 +161,19 @@ def generate_video(config: VideoConfig, output_path: str | Path) -> None:
     if fps <= 0:
         raise ValueError("Invalid fps")
 
-    # Calculate total frames
     total_frames = calculate_frame_count(duration, int(fps))
+    num_chunks = (total_frames + CHUNK_SIZE - 1) // CHUNK_SIZE
 
-    # Generate frames in parallel batches
-    chunk_size = 100  # Process ~100 frames per worker task
-    num_chunks = (total_frames + chunk_size - 1) // chunk_size
+    with tqdm(total=num_chunks, desc="Processing chunks", unit="chunk") as pbar:
+        frame_stream = _stream_frames(config, total_frames, int(fps), progress=pbar)
+        try:
+            feeder = _SequentialFrameFeeder(frame_stream, fps)
+            # Match VideoClip's frame count exactly to total_frames so
+            # write_videofile's iter_frames() pulls precisely as many
+            # frames as the stream produces.
+            clip = VideoClip(make_frame=feeder, duration=total_frames / fps)
 
-    # Create list of frame batches
-    batches = [
-        list(range(i * chunk_size, min((i + 1) * chunk_size, total_frames)))
-        for i in range(num_chunks)
-    ]
-
-    # Submit all batch jobs and collect results in order
-    frames_dict: dict[int, list[np.ndarray]] = {}
-    with ProcessPoolExecutor(max_workers=8) as executor:
-        futures = {
-            executor.submit(_generate_frame_batch, config, batch, int(fps)): batch
-            for batch in batches
-        }
-
-        with tqdm(total=num_chunks, desc="Processing chunks", unit="chunk") as pbar:
-            for future in as_completed(futures):
-                start_frame_num, frame_batch = future.result()
-                frames_dict[start_frame_num] = frame_batch
-                # Update progress
-                pbar.update(1)
-                # Show chunks completed and time progress
-                total_frames_done = sum(len(batch) for batch in frames_dict.values())
-                time_done = total_frames_done / fps
-                mins, secs = divmod(time_done, 60)
-                pbar.set_postfix(
-                    {
-                        "frames": f"{total_frames_done}/{total_frames}",
-                        "time": f"{int(mins):02d}:{secs:05.2f}",
-                    }
-                )
-
-    # Reconstruct frames in correct order
-    frames = []
-    for frame_num in range(total_frames):
-        batch_start = (frame_num // chunk_size) * chunk_size
-        batch_offset = frame_num % chunk_size
-        frames.append(frames_dict[batch_start][batch_offset])
-
-    # Create video clip
-    clip = ImageSequenceClip(frames, fps=fps)
-
-    # Write video file
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    clip.write_videofile(str(output_path))
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            clip.write_videofile(str(output_path), fps=fps)
+        finally:
+            frame_stream.close()

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 from PIL import ImageFont
 
 
+@lru_cache(maxsize=None)
 def load_font(family: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     """
     Load a TrueType font by family name and size.

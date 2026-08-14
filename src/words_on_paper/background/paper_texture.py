@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 from PIL import Image
 
 from words_on_paper.utils.color import hex_to_rgb
 
 
+@lru_cache(maxsize=None)
 def generate_background(
     width: int,
     height: int,
@@ -17,6 +20,10 @@ def generate_background(
 ) -> Image.Image:
     """
     Generate a background image with optional paper texture.
+
+    Cached per (width, height, color, texture_type, texture_intensity) since
+    the same static background is otherwise rebuilt on every frame. Callers
+    must not mutate the returned image in place — copy it first.
 
     Args:
         width: Image width in pixels
