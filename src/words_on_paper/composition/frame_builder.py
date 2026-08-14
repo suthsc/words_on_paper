@@ -150,6 +150,22 @@ def _render_text_layer(
         center_spacing=center_spacing,
     )
 
+    # Dimensions of the fully-revealed text, used for position calculation so
+    # a typing effect doesn't shift a width-dependent position (e.g. centered)
+    # as characters are typed in.
+    full_text_width, full_text_height = (
+        (text_width, text_height)
+        if text_to_render == text_seq.content
+        else get_text_dimensions(
+            text_seq.content,
+            text_seq.font.family,
+            text_seq.font.size,
+            text_seq.orientation,
+            letter_spacing=letter_spacing,
+            center_spacing=center_spacing,
+        )
+    )
+
     # Render the text
     text_img = render_text(
         text_to_render,
@@ -188,12 +204,16 @@ def _render_text_layer(
             # Update dimensions to match scaled image
             text_width = text_img.width
             text_height = text_img.height
+            full_text_width = int(full_text_width * scale_factor)
+            full_text_height = int(full_text_height * scale_factor)
 
-    # Calculate position based on actual rendered text dimensions
+    # Calculate position based on the fully-revealed text's dimensions, so a
+    # width-dependent position (e.g. centered) stays stable across typing
+    # frames instead of drifting as text_to_render grows.
     x, y = calculate_position(
         text_seq.position,
-        text_width,
-        text_height,
+        full_text_width,
+        full_text_height,
         video_width,
         video_height,
         text_seq.content,

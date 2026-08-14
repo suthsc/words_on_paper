@@ -6,6 +6,7 @@ from words_on_paper.composition import (
     build_frame,
     calculate_position,
 )
+from words_on_paper.composition.frame_builder import _render_text_layer
 from words_on_paper.config.schema import (
     DepthOfFieldEffect,
     DropShadow,
@@ -137,6 +138,35 @@ class TestBuildFrame:
         )
         frame = build_frame(config, 0.5)
         assert isinstance(frame, Image.Image)
+
+    def test_typing_effect_position_stable_across_frames(self) -> None:
+        """A width-dependent position (centered) for a typing text sequence
+        must be computed from the fully-revealed text, not the truncated
+        text being typed — otherwise the text visibly drifts as it types."""
+        text_seq = TextSequence(
+            content="Hello World",
+            start_time=0,
+            fade_in_duration=0,
+            display_duration=5,
+            fade_out_duration=0,
+            position=Position(mode="center"),
+            effects=Effects(
+                typing=TypingEffect(enabled=True, chars_per_second=2),
+                drop_shadow=DropShadow(enabled=False),
+            ),
+        )
+        video_width, video_height = 1920, 1080
+
+        positions = set()
+        # Sample several frames while typing is still in progress (11 chars
+        # at 2 chars/sec takes 5.5s to fully reveal).
+        for current_time in (0.1, 1.0, 2.0, 3.0, 4.0):
+            _, x, y = _render_text_layer(
+                text_seq, current_time, video_width, video_height
+            )
+            positions.add((x, y))
+
+        assert len(positions) == 1
 
     def test_build_frame_custom_resolution(self) -> None:
         """Test frame with custom video resolution."""
