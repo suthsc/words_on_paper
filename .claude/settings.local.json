@@ -10,7 +10,22 @@
       "Bash(uv pip install:*)",
       "Bash(python -m pytest:*)",
       "Bash(words-on-paper generate:*)",
-      "Bash(uv venv:*)"
+      "Bash(uv venv:*)",
+      "mcp__codebase-memory-mcp__index_repository",
+      "mcp__codebase-memory-mcp__get_architecture",
+      "mcp__codebase-memory-mcp__search_graph",
+      "mcp__codebase-memory-mcp__query_graph",
+      "mcp__codebase-memory-mcp__search_code",
+      "mcp__codebase-memory-mcp__trace_path",
+      "mcp__codebase-memory-mcp__get_code_snippet",
+      "Bash(bd *)",
+      "Bash(cat /Users/suthsc/src/Python/words_on_paper/src/words_on_paper/composition/frame_builder.py)",
+      "Read(//tmp/**)",
+      "Bash(cat)",
+      "Bash(python3 /tmp/update_frame_builder.py)",
+      "Bash(python3 /tmp/update_paper_texture.py)",
+      "Edit",
+      "mcp__codebase-memory-mcp__list_projects"
     ]
   }
 }

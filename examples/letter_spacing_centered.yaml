@@ -1,0 +1,121 @@
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+background:
+  type: solid
+  color: "#F5F5F5"
+  texture_intensity: 0.05
+
+texts:
+  # Title - no spacing effect
+  - content: "Converging Text"
+    start_time: 0.0
+    fade_in_duration: 1.0
+    display_duration: 1.5
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 72
+      color: "#1A1A1A"
+
+    position:
+      mode: center
+
+    z_index: 2
+
+  # Centered spacing example - text converges toward center
+  - content: "Characters draw closer to the center"
+    start_time: 2.5
+    fade_in_duration: 2.0
+    display_duration: 3.0
+    fade_out_duration: 2.0
+
+    font:
+      family: Georgia
+      size: 56
+      color: "#2C3E50"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.2
+        target_spacing: 0.85
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: false
+
+    z_index: 1
+
+  # Second centered spacing example with moderate effect
+  - content: "Wide to narrow to wide"
+    start_time: 8.0
+    fade_in_duration: 1.5
+    display_duration: 2.5
+    fade_out_duration: 1.5
+
+    font:
+      family: Georgia
+      size: 64
+      color: "#34495E"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.3
+        target_spacing: 0.80
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: false
+
+    z_index: 1
+
+  # Centered spacing combined with depth-of-field for dramatic effect
+  - content: "Converging with depth"
+    start_time: 12.0
+    fade_in_duration: 2.0
+    display_duration: 2.5
+    fade_out_duration: 2.0
+
+    font:
+      family: Georgia
+      size: 60
+      color: "#7F8C8D"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.1
+        target_spacing: 0.82
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+      depth_of_field:
+        enabled: true
+        initial_distance: 0.6
+        inward_frames: 60
+        crisp_frames: 75
+        outward_frames: 60
+        blur_sigma: 0.2
+        blur_max_radius: 30
+        alpha_sigma: 0.18
+        alpha_min: 0.35
+      drop_shadow:
+        enabled: false
+
+    z_index: 0

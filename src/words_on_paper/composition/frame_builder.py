@@ -5,19 +5,22 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageFilter
 from PIL.Image import Resampling
 
 from words_on_paper.background import generate_background
 from words_on_paper.composition.animator import (
+    calculate_depth_of_field,
+    calculate_letter_spacing,
     calculate_scale_factor,
     calculate_text_opacity,
     calculate_visible_chars,
 )
 from words_on_paper.composition.layer_manager import composite_layers
 from words_on_paper.config.schema import TextSequence, VideoConfig
-from words_on_paper.rendering.text_renderer import render_text
+from words_on_paper.rendering.text_renderer import get_text_dimensions, render_text
 from words_on_paper.utils.color import hex_to_rgba
+from words_on_paper.utils.image import ensure_rgba
 
 
 def build_frame(
@@ -48,8 +51,7 @@ def build_frame(
     )
 
     # Convert background to RGBA for compositing
-    if background.mode != "RGBA":
-        background = background.convert("RGBA")
+    background = ensure_rgba(background)
 
     # Build layers from text sequences
     layers: list[tuple[Image.Image, int, int, int]] = []
@@ -116,13 +118,47 @@ def _render_text_layer(
             text_seq.effects.typing.chars_per_second,
         )
 
-    # Render full text (for consistent positioning)
-    full_text_img = render_text(
-        text_seq.content,
+    # Determine which text to render (full or visible for typing effect)
+    text_to_render = text_seq.content
+    if text_seq.effects.typing.enabled and visible_char_count < len(text_seq.content):
+        text_to_render = text_seq.content[:visible_char_count]
+
+    # Calculate letter spacing effect
+    letter_spacing = 1.0
+    center_spacing = False
+    if text_seq.effects.letter_spacing.enabled:
+        letter_spacing = calculate_letter_spacing(
+            current_time=current_time,
+            start_time=text_seq.start_time,
+            fade_in_duration=text_seq.fade_in_duration,
+            display_duration=text_seq.display_duration,
+            fade_out_duration=text_seq.fade_out_duration,
+            initial_spacing=text_seq.effects.letter_spacing.initial_spacing,
+            target_spacing=text_seq.effects.letter_spacing.target_spacing,
+            apply_to_fade_out=text_seq.effects.letter_spacing.apply_to_fade_out,
+            easing=text_seq.effects.letter_spacing.easing,
+        )
+        center_spacing = text_seq.effects.letter_spacing.center_spacing
+
+    # Get dimensions of rendered text (for accurate positioning)
+    text_width, text_height = get_text_dimensions(
+        text_to_render,
+        text_seq.font.family,
+        text_seq.font.size,
+        text_seq.orientation,
+        letter_spacing=letter_spacing,
+        center_spacing=center_spacing,
+    )
+
+    # Render the text
+    text_img = render_text(
+        text_to_render,
         text_seq.font.family,
         text_seq.font.size,
         text_seq.font.color,
         text_seq.orientation,
+        letter_spacing=letter_spacing,
+        center_spacing=center_spacing,
     )
 
     # Calculate and apply scale effect
@@ -140,37 +176,28 @@ def _render_text_layer(
         )
 
         if scale_factor != 1.0:
-            new_width = int(full_text_img.width * scale_factor)
-            new_height = int(full_text_img.height * scale_factor)
+            new_width = int(text_img.width * scale_factor)
+            new_height = int(text_img.height * scale_factor)
             # Ensure minimum 1px dimensions
             new_width = max(1, new_width)
             new_height = max(1, new_height)
-            full_text_img = full_text_img.resize(
+            text_img = text_img.resize(
                 (new_width, new_height),
                 Resampling.LANCZOS,
             )
+            # Update dimensions to match scaled image
+            text_width = text_img.width
+            text_height = text_img.height
 
-    # Calculate position BEFORE any cropping (based on scaled text dimensions)
+    # Calculate position based on actual rendered text dimensions
     x, y = calculate_position(
         text_seq.position,
-        full_text_img.width,
-        full_text_img.height,
+        text_width,
+        text_height,
         video_width,
         video_height,
         text_seq.content,
     )
-
-    # For typing effect, clip to show only visible characters
-    text_img = full_text_img
-    if text_seq.effects.typing.enabled and visible_char_count < len(text_seq.content):
-        # Render visible text to get its dimensions
-        text_img = render_text(
-            text_seq.content[:visible_char_count],
-            text_seq.font.family,
-            text_seq.font.size,
-            text_seq.font.color,
-            text_seq.orientation,
-        )
 
     # Apply opacity
     if opacity < 1.0:
@@ -180,14 +207,29 @@ def _render_text_layer(
     if text_seq.effects.drop_shadow.enabled:
         text_img = _apply_drop_shadow(text_img, text_seq.effects.drop_shadow)
 
+    # Apply depth-of-field effect if enabled
+    if text_seq.effects.depth_of_field.enabled:
+        dof = text_seq.effects.depth_of_field
+        distance, blur_radius, dof_alpha = calculate_depth_of_field(
+            current_time=current_time,
+            start_time=text_seq.start_time,
+            inward_frames=dof.inward_frames,
+            crisp_frames=dof.crisp_frames,
+            outward_frames=dof.outward_frames,
+            initial_distance=dof.initial_distance,
+            blur_sigma=dof.blur_sigma,
+            blur_max_radius=dof.blur_max_radius,
+            alpha_sigma=dof.alpha_sigma,
+            alpha_min=dof.alpha_min,
+        )
+        text_img = _apply_depth_of_field_blur(text_img, blur_radius, dof_alpha)
+
     return text_img, x, y
 
 
 def _apply_opacity(img: Image.Image, opacity: float) -> Image.Image:
     """Apply opacity to an image."""
-    # Convert to RGBA if needed
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
+    img = ensure_rgba(img)
 
     # Apply opacity to alpha channel
     alpha = img.split()[3]
@@ -199,11 +241,7 @@ def _apply_opacity(img: Image.Image, opacity: float) -> Image.Image:
 
 def _apply_drop_shadow(img: Image.Image, shadow_config) -> Image.Image:
     """Apply drop shadow effect to an image."""
-    from PIL import ImageFilter
-
-    # Ensure RGBA mode
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
+    img = ensure_rgba(img)
 
     # Get shadow color with alpha
     shadow_rgba = hex_to_rgba(shadow_config.color)
@@ -245,6 +283,44 @@ def _apply_drop_shadow(img: Image.Image, shadow_config) -> Image.Image:
     result.paste(img, (0, 0), img)
 
     return result
+
+
+def _apply_depth_of_field_blur(
+    img: Image.Image, blur_radius: int, alpha_adjust: float
+) -> Image.Image:
+    """Apply depth-of-field blur and alpha adjustment to an image."""
+    img = ensure_rgba(img)
+
+    if blur_radius > 0:
+        # Calculate padding based on blur radius
+        # Gaussian blur extends significantly, use generous padding to prevent clipping
+        padding = max(blur_radius * 6, 20)
+
+        # Create expanded canvas with padding on all sides
+        expanded = Image.new(
+            "RGBA",
+            (img.width + padding * 2, img.height + padding * 2),
+            (0, 0, 0, 0),
+        )
+
+        # Paste original image centered in expanded canvas
+        expanded.paste(img, (padding, padding), img)
+
+        # Apply blur to expanded image (blur extends into padding areas)
+        expanded = expanded.filter(ImageFilter.GaussianBlur(blur_radius))
+
+        # Crop back to original size, preserving blur at all edges
+        img = expanded.crop(
+            (padding, padding, padding + img.width, padding + img.height)
+        )
+
+    # Apply alpha adjustment
+    if alpha_adjust < 1.0:
+        alpha = img.split()[3]
+        alpha = alpha.point(lambda x: int(x * alpha_adjust))
+        img.putalpha(alpha)
+
+    return img
 
 
 def calculate_position(

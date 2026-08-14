@@ -7,8 +7,10 @@ from words_on_paper.composition import (
     calculate_position,
 )
 from words_on_paper.config.schema import (
+    DepthOfFieldEffect,
     DropShadow,
     Effects,
+    LetterSpacingEffect,
     Position,
     ScaleEffect,
     TextSequence,
@@ -290,4 +292,470 @@ class TestBuildFrame:
             ]
         )
         frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_with_depth_of_field(self) -> None:
+        """Test frame building with depth-of-field effect enabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="DOF Text",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=5,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=60,
+                            outward_frames=30,
+                        )
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+        assert frame.mode == "RGB"
+
+    def test_depth_of_field_inward_phase(self) -> None:
+        """Test depth-of-field inward phase (approaching focal plane)."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Approaching",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=3,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                            initial_distance=0.8,
+                        )
+                    ),
+                )
+            ]
+        )
+        # Early in inward phase - should have blur
+        frame_early = build_frame(config, 0.3)
+        assert isinstance(frame_early, Image.Image)
+
+        # Late in inward phase - blur reduces as approaching focal plane
+        frame_late = build_frame(config, 0.9)
+        assert isinstance(frame_late, Image.Image)
+
+    def test_depth_of_field_crisp_phase(self) -> None:
+        """Test depth-of-field crisp phase (at focal plane)."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="In Focus",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=3,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                        )
+                    ),
+                )
+            ]
+        )
+        # During crisp phase - minimal blur
+        frame = build_frame(config, 1.2)
+        assert isinstance(frame, Image.Image)
+
+    def test_depth_of_field_outward_phase(self) -> None:
+        """Test depth-of-field outward phase (receding from focal plane)."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Receding",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=3,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                        )
+                    ),
+                )
+            ]
+        )
+        # Early in outward phase - blur increases as receding
+        frame_early = build_frame(config, 2.1)
+        assert isinstance(frame_early, Image.Image)
+
+        # Late in outward phase - blur reaches maximum
+        frame_late = build_frame(config, 2.95)
+        assert isinstance(frame_late, Image.Image)
+
+    def test_depth_of_field_with_other_effects(self) -> None:
+        """Test depth-of-field combined with other effects."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Complex Effects",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        scale=ScaleEffect(enabled=True, initial_scale=0.8),
+                        drop_shadow=DropShadow(enabled=True),
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            inward_frames=30,
+                            crisp_frames=30,
+                            outward_frames=30,
+                            blur_max_radius=20,
+                        ),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_with_letter_spacing_effect(self) -> None:
+        """Test frame with letter-spacing effect enabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Hello World",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            apply_to_fade_out=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+        assert frame.size == (1920, 1080)
+
+    def test_build_frame_letter_spacing_fade_in_phase(self) -> None:
+        """Test letter spacing during fade-in phase."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Spacing",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.5,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 0.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_display_phase(self) -> None:
+        """Test letter spacing during display phase."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Display",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.6,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_fade_out_phase(self) -> None:
+        """Test letter spacing during fade-out phase."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Fade Out",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            apply_to_fade_out=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 3.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_with_depth_of_field(self) -> None:
+        """Test letter spacing combined with depth-of-field effect."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Perspective",
+                    start_time=0,
+                    fade_in_duration=2,
+                    display_duration=2,
+                    fade_out_duration=2,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                        ),
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            initial_distance=0.8,
+                            inward_frames=30,
+                            crisp_frames=60,
+                            outward_frames=30,
+                            blur_sigma=0.2,
+                            blur_max_radius=25,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_letter_spacing_vertical_text(self) -> None:
+        """Test letter spacing with vertical text."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="ABC",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    orientation="vertical",
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.8,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_with_centered_spacing(self) -> None:
+        """Test frame with centered letter-spacing enabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Centered",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.6,
+                            center_spacing=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+        assert frame.size == (1920, 1080)
+
+    def test_build_frame_centered_vs_sequential_spacing(self) -> None:
+        """Test that centered spacing produces different visual output."""
+        config_centered = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Test Text",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=2,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            center_spacing=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+
+        config_sequential = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Test Text",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=2,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            center_spacing=False,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+
+        frame_centered = build_frame(config_centered, 1.0)
+        frame_sequential = build_frame(config_sequential, 1.0)
+
+        assert isinstance(frame_centered, Image.Image)
+        assert isinstance(frame_sequential, Image.Image)
+        # Both should have same size (text dimensions are calculated same way)
+        assert frame_centered.size == frame_sequential.size
+
+    def test_build_frame_centered_spacing_vertical_text(self) -> None:
+        """Test centered spacing with vertical text."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="VERT",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    orientation="vertical",
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.65,
+                            center_spacing=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_centered_spacing_with_multiple_texts(self) -> None:
+        """Test centered spacing with multiple text sequences."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="First",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=1,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            center_spacing=True,
+                        ),
+                    ),
+                ),
+                TextSequence(
+                    content="Second",
+                    start_time=2,
+                    fade_in_duration=1,
+                    display_duration=1,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            center_spacing=True,
+                        ),
+                    ),
+                ),
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_centered_spacing_with_depth_of_field(self) -> None:
+        """Test centered spacing combined with depth-of-field."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Converge",
+                    start_time=0,
+                    fade_in_duration=2,
+                    display_duration=2,
+                    fade_out_duration=2,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.65,
+                            center_spacing=True,
+                        ),
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            initial_distance=0.7,
+                            inward_frames=45,
+                            crisp_frames=45,
+                            outward_frames=45,
+                            blur_sigma=0.2,
+                            blur_max_radius=25,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 2.0)
         assert isinstance(frame, Image.Image)

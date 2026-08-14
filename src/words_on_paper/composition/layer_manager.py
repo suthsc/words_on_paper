@@ -2,6 +2,8 @@
 
 from PIL import Image
 
+from words_on_paper.utils.image import ensure_rgba
+
 
 def composite_layers(
     background: Image.Image,
@@ -39,13 +41,8 @@ def _paste_with_alpha(
         layer: Layer to paste (must be RGBA)
         pos: (x, y) position
     """
-    # Convert background to RGBA if needed
-    if background.mode != "RGBA":
-        background = background.convert("RGBA")
-
-    # Ensure layer is RGBA
-    if layer.mode != "RGBA":
-        layer = layer.convert("RGBA")
+    background = ensure_rgba(background)
+    layer = ensure_rgba(layer)
 
     # Paste with alpha
     background.paste(layer, pos, layer)

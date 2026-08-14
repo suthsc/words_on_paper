@@ -7,6 +7,7 @@ from words_on_paper.config.schema import (
     BackgroundConfig,
     Effects,
     Font,
+    LetterSpacingEffect,
     Position,
     ScaleEffect,
     TextSequence,
@@ -125,6 +126,93 @@ class TestScaleEffect:
         for easing_type in ["linear", "ease_in", "ease_out", "ease_in_out"]:
             scale = ScaleEffect(easing=easing_type)
             assert scale.easing == easing_type
+
+
+class TestLetterSpacingEffect:
+    """Test LetterSpacingEffect configuration."""
+
+    def test_letter_spacing_effect_default(self) -> None:
+        """Test letter spacing effect with defaults."""
+        effect = LetterSpacingEffect()
+        assert not effect.enabled
+        assert effect.initial_spacing == 1.0
+        assert effect.target_spacing == 0.7
+        assert effect.apply_to_fade_out
+        assert effect.easing == "ease_in_out"
+
+    def test_letter_spacing_effect_custom(self) -> None:
+        """Test letter spacing effect with custom values."""
+        effect = LetterSpacingEffect(
+            enabled=True,
+            initial_spacing=1.2,
+            target_spacing=0.8,
+            apply_to_fade_out=False,
+            easing="linear",
+        )
+        assert effect.enabled
+        assert effect.initial_spacing == 1.2
+        assert effect.target_spacing == 0.8
+        assert not effect.apply_to_fade_out
+        assert effect.easing == "linear"
+
+    def test_letter_spacing_effect_invalid_initial_spacing_zero(self) -> None:
+        """Test that initial_spacing <= 0 is rejected."""
+        with pytest.raises(ValidationError):
+            LetterSpacingEffect(initial_spacing=0.0)
+        with pytest.raises(ValidationError):
+            LetterSpacingEffect(initial_spacing=-0.5)
+
+    def test_letter_spacing_effect_invalid_target_spacing_zero(self) -> None:
+        """Test that target_spacing <= 0 is rejected."""
+        with pytest.raises(ValidationError):
+            LetterSpacingEffect(target_spacing=0.0)
+        with pytest.raises(ValidationError):
+            LetterSpacingEffect(target_spacing=-0.5)
+
+    def test_letter_spacing_effect_valid_spacing_bounds(self) -> None:
+        """Test valid spacing boundaries."""
+        # Very small valid values
+        effect_small = LetterSpacingEffect(initial_spacing=0.01, target_spacing=0.01)
+        assert effect_small.initial_spacing == pytest.approx(0.01)
+
+        # Large valid values
+        effect_large = LetterSpacingEffect(initial_spacing=5.0, target_spacing=5.0)
+        assert effect_large.initial_spacing == 5.0
+
+    def test_letter_spacing_effect_invalid_easing(self) -> None:
+        """Test that invalid easing is rejected."""
+        with pytest.raises(ValidationError):
+            LetterSpacingEffect(easing="invalid_easing")
+
+    def test_letter_spacing_effect_valid_easing_types(self) -> None:
+        """Test all valid easing types."""
+        for easing_type in ["linear", "ease_in", "ease_out", "ease_in_out"]:
+            effect = LetterSpacingEffect(easing=easing_type)
+            assert effect.easing == easing_type
+
+    def test_letter_spacing_effect_center_spacing_default(self) -> None:
+        """Test center_spacing defaults to False."""
+        effect = LetterSpacingEffect()
+        assert not effect.center_spacing
+
+    def test_letter_spacing_effect_center_spacing_enabled(self) -> None:
+        """Test center_spacing can be enabled."""
+        effect = LetterSpacingEffect(center_spacing=True)
+        assert effect.center_spacing
+
+    def test_letter_spacing_effect_center_spacing_with_other_params(self) -> None:
+        """Test center_spacing combined with other parameters."""
+        effect = LetterSpacingEffect(
+            enabled=True,
+            initial_spacing=1.2,
+            target_spacing=0.6,
+            center_spacing=True,
+            easing="ease_in_out",
+        )
+        assert effect.enabled
+        assert effect.center_spacing
+        assert effect.initial_spacing == 1.2
+        assert effect.target_spacing == 0.6
 
 
 class TestEffects:

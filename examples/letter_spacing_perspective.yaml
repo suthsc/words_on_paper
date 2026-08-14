@@ -1,0 +1,153 @@
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+background:
+  type: paper
+  color: "#FFFEF5"
+  texture_intensity: 0.08
+
+texts:
+  # Title - appears and stays
+  - content: "This Is Just To Say"
+    start_time: 0.0
+    fade_in_duration: 1.0
+    display_duration: 2.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 72
+      color: "#2C3E50"
+
+    position:
+      mode: center
+
+    z_index: 1
+
+  # First stanza - recedes with letter spacing
+  - content: "I have eaten"
+    start_time: 3.0
+    fade_in_duration: 1.5
+    display_duration: 2.0
+    fade_out_duration: 1.5
+
+    font:
+      family: Georgia
+      size: 64
+      color: "#34495E"
+
+    position:
+      mode: absolute
+      x: 200
+      y: 300
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.0
+        target_spacing: 0.7
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: false
+
+    z_index: 0
+
+  # Second stanza
+  - content: "the plums"
+    start_time: 5.5
+    fade_in_duration: 1.5
+    display_duration: 2.0
+    fade_out_duration: 1.5
+
+    font:
+      family: Georgia
+      size: 64
+      color: "#34495E"
+
+    position:
+      mode: absolute
+      x: 200
+      y: 400
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.0
+        target_spacing: 0.7
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: false
+
+    z_index: 0
+
+  # Third stanza
+  - content: "that were in"
+    start_time: 8.0
+    fade_in_duration: 1.5
+    display_duration: 2.0
+    fade_out_duration: 1.5
+
+    font:
+      family: Georgia
+      size: 64
+      color: "#34495E"
+
+    position:
+      mode: absolute
+      x: 200
+      y: 500
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.0
+        target_spacing: 0.7
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: false
+
+    z_index: 0
+
+  # Final line with both depth-of-field and letter spacing for extra effect
+  - content: "the icebox"
+    start_time: 10.5
+    fade_in_duration: 1.5
+    display_duration: 2.5
+    fade_out_duration: 2.0
+
+    font:
+      family: Georgia
+      size: 56
+      color: "#7F8C8D"
+
+    position:
+      mode: absolute
+      x: 150
+      y: 600
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.1
+        target_spacing: 0.65
+        apply_to_fade_out: true
+        easing: ease_in_out
+      depth_of_field:
+        enabled: true
+        initial_distance: 0.7
+        inward_frames: 45
+        crisp_frames: 45
+        outward_frames: 60
+        blur_sigma: 0.25
+        blur_max_radius: 30
+        alpha_sigma: 0.2
+        alpha_min: 0.4
+      drop_shadow:
+        enabled: false
+
+    z_index: 0

@@ -31,6 +31,20 @@ class Font(BaseModel):
     color: str = "#000000"
 
 
+class DepthOfFieldEffect(BaseModel):
+    """Depth-of-field focal plane effect."""
+
+    enabled: bool = False
+    initial_distance: float = Field(default=0.5, ge=0.0, le=1.0)
+    inward_frames: int = Field(default=30, ge=0)
+    crisp_frames: int = Field(default=60, ge=0)
+    outward_frames: int = Field(default=30, ge=0)
+    blur_sigma: float = Field(default=0.2, gt=0.0, le=1.0)
+    blur_max_radius: int = Field(default=25, ge=0)
+    alpha_sigma: float = Field(default=0.2, gt=0.0, le=1.0)
+    alpha_min: float = Field(default=0.3, ge=0.0, lt=1.0)
+
+
 class TypingEffect(BaseModel):
     """Configuration for typing/reveal effect."""
 
@@ -57,12 +71,40 @@ class ScaleEffect(BaseModel):
     easing: Literal["linear", "ease_in", "ease_out", "ease_in_out"] = "ease_in_out"
 
 
+class LetterSpacingEffect(BaseModel):
+    """Letter spacing effect to create perspective/distance illusion.
+
+    Two spacing modes:
+    - Sequential (center_spacing=False): Characters spaced uniformly from start to end
+    - Centered (center_spacing=True): Spacing varies symmetrically around text center
+      (tighter in center, wider at edges)
+
+    Spacing values are automatically clamped to MIN_READABLE_SPACING (0.75) to maintain
+    text readability. Recommended ranges:
+    - Sequential: target_spacing >= 0.75 (0.75-1.5 recommended)
+    - Centered: target_spacing >= 0.75 (0.80-1.0 recommended, as edge spacing remains wide)
+    """
+
+    enabled: bool = False
+    initial_spacing: float = Field(
+        default=1.0, gt=0.0, description="Starting spacing multiplier"
+    )
+    target_spacing: float = Field(
+        default=0.7, gt=0.0, description="Target spacing (auto-clamped to 0.75 minimum)"
+    )
+    apply_to_fade_out: bool = True
+    center_spacing: bool = False
+    easing: Literal["linear", "ease_in", "ease_out", "ease_in_out"] = "ease_in_out"
+
+
 class Effects(BaseModel):
     """Effect configurations."""
 
     typing: TypingEffect = Field(default_factory=TypingEffect)
     drop_shadow: DropShadow = Field(default_factory=DropShadow)
     scale: ScaleEffect = Field(default_factory=ScaleEffect)
+    letter_spacing: LetterSpacingEffect = Field(default_factory=LetterSpacingEffect)
+    depth_of_field: DepthOfFieldEffect = Field(default_factory=DepthOfFieldEffect)
 
 
 class TextSequence(BaseModel):

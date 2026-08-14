@@ -15,7 +15,7 @@ texts:
     fade_out_duration: 2.0
 
     font:
-      family: Arial
+      family: Georgia
       size: 120
       color: "#000000"
 
@@ -28,3 +28,13 @@ texts:
         initial_scale: 0.5
         apply_to_fade_out: true
         easing: ease_in_out
+      depth_of_field:
+        enabled: true
+        initial_distance: 0.8
+        inward_frames: 30
+        crisp_frames: 60
+        outward_frames: 30
+        blur_sigma: 0.2
+        blur_max_radius: 25
+        alpha_sigma: 0.2
+        alpha_min: 0.3
