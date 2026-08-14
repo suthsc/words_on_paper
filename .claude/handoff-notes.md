@@ -1,117 +1,119 @@
-# Handoff notes — 2026-08-13
+# Handoff notes — 2026-08-13 (session 3)
 
 ## What I was doing and why
 
-Started by reviewing the most recently closed beads issue (`words_on_paper-8g7`,
-the typing-effect dedup fix in `d0a2757`) at the user's request. While verifying
-the fix I found it introduced a real regression: `_render_text_layer` now measures
-position using `text_to_render` (the truncated/visible substring during typing)
-instead of the full `text_seq.content`. The old code deliberately measured the
-full string ("for consistent positioning"). Net effect: for typing effects
-combined with a width-dependent position mode (e.g. centered), the text will
-visibly drift each frame as it types out. No test catches this
-(`test_build_frame_with_typing_effect` never checks position stability across
-frames). I reported this as a finding but did NOT fix it — just flagged it.
-Nobody has picked it up as a bug yet.
+Started work on `words_on_paper-4eh` (P1 — long videos OOM because
+`video/assembler.py` materializes every frame in memory before handing them
+to MoviePy's `ImageSequenceClip`). User had already checked out a new branch
+`words_on_paper-4eh` from `main` before I started. I claimed the bd issue
+(`bd update words_on_paper-4eh --claim`).
 
-From there the user asked me to file two new beads issues and iterate on one of
-them based on their corrections:
+**No code has been changed yet** — this session was pure investigation/design.
+The working tree has no diffs beyond the pre-existing `.claude/handoff-notes.md`
+modification (this file). Nothing to commit.
 
-- **words_on_paper-fjy** (P2): ruff C901 complexity violation in
-  `_calculate_spaced_dimensions` (text_renderer.py:92). Straightforward, no
-  design decisions embedded.
+## What I confirmed by reading the code
 
-- **words_on_paper-4eh** (P1): long-video OOM. This one went through two rounds
-  of user correction — worth remembering the final shape:
-  - User's first correction: don't make it strictly sequential. A single frame
-    should still be built in one atomic pass; the constraint is that frames
-    *across the whole video* shouldn't all be resident in memory at once.
-  - My own review (after actually reading `video/assembler.py`, not just
-    assuming): the real current architecture is worse than "sequential
-    accumulation" — it's parallel (8-worker `ProcessPoolExecutor`, 100-frame
-    chunks) generation of the ENTIRE video's frames simultaneously, all
-    collected into `frames_dict` and flattened into one list before
-    `ImageSequenceClip`. That's the actual OOM source.
-  - Added to the ticket: the fix needs BOUNDED concurrency (not zero
-    concurrency — don't regress the 8x speedup), `VideoClip(make_frame=...)`
-    named as the correct MoviePy primitive (not `ImageSequenceClip`, which
-    inherently wants a full frame list), and two concrete confirmed cross-frame
-    caching wins: `rendering/fonts.py:load_font()` has no caching at all
-    (reloads from disk every call, every frame), and
-    `background/paper_texture.py:generate_background()` regenerates the full
-    noise texture from scratch every frame even when background is static.
-  - Acceptance criteria now explicitly include "no significant render-speed
-    regression vs. current parallel approach" — this was missing originally and
-    is easy to lose sight of when focused on the memory bug.
+- `video/assembler.py::generate_video`: splits total frames into 100-frame
+  chunks, submits **all** chunks at once to an 8-worker `ProcessPoolExecutor`,
+  collects everything into `frames_dict`, flattens into one `frames` list,
+  then `ImageSequenceClip(frames, fps=fps)`. Confirms the bd issue's
+  description exactly — full-video frame list is the OOM source.
+- `rendering/fonts.py::load_font`: no caching, walks the filesystem and calls
+  `ImageFont.truetype` fresh every call. Easy `functools.lru_cache` candidate
+  — return value (PIL `ImageFont`) is not mutated anywhere downstream, safe
+  to share across calls within a worker process.
+- `background/paper_texture.py::generate_background`: regenerates noise from
+  scratch every frame even for a static (non-animated) background. Checked
+  the consumer chain to make sure caching is safe:
+  `composition/frame_builder.py::build_frame` calls `generate_background`,
+  then `ensure_rgba(background)` (returns the *same* object if already RGBA,
+  a new one otherwise — no mutation either way), then either passes it into
+  `composite_layers` (which does `background.copy()` before pasting — safe)
+  or, if there are no text layers, returns the background object directly as
+  the frame. In all paths the original returned-by-`generate_background`
+  image is never mutated in place. **Conclusion: `lru_cache` on
+  `generate_background` (keyed on width/height/color/texture_type/intensity)
+  is safe as-is** — don't need to add a defensive `.copy()`, though it
+  wouldn't hurt if a future change makes the safety less obvious.
+- Confirmed via venv (`moviepy==1.0.3`) that `VideoClip.__init__` signature is
+  `(self, make_frame=None, ismask=False, duration=None,
+  has_constant_size=True)` — this is the primitive the bd issue's design
+  brief points at, confirmed available in the installed version.
+- I was about to inspect `VideoClip.write_videofile` source to confirm it
+  calls `make_frame(t)` with strictly increasing/sequential `t` (this matters
+  a lot for the design below) when the user interrupted to end the session.
+  **This is the next concrete step — not yet verified.**
 
-Then the user asked me to prefer codebase-memory tools over grep — saved that as
-a feedback memory (`feedback_codebase_memory_preference.md`), and discovered
-mid-way that the `words_on_paper` project wasn't actually indexed yet (the
-session-start background-indexing notice didn't seem to have completed/registered
-— `list_projects` only showed a docker-infra project). I ran `index_repository`
-manually to fix this. **Gotcha for next time**: don't trust the "indexing in
-background" startup notice at face value — check `list_projects` before relying
-on graph tools, and re-index if the project is missing.
+## Design I was converging on (not yet implemented, not yet fully vetted)
 
-Finally, reviewed and updated `CLAUDE.md` against actual codebase state (verified
-via codebase-memory + running actual commands, not just reading old docs):
-- Fixed stale `words_on_paper/` root layout → actual `src/words_on_paper/` src
-  layout (this also meant the documented `cli/` subpackage was wrong — `cli.py`
-  is flat under the package root).
-- Verified `mypy words_on_paper` (as documented) actually fails outright with
-  this layout — fixed to `mypy src/words_on_paper` in all 3 places it appeared.
-- Documented effects that exist in code but weren't mentioned: `scale`,
-  `letter_spacing` (sequential/centered/perspective), `depth_of_field`.
-- Added `utils/image.py` to the utils list (was missing).
-- Refreshed test/coverage numbers by actually running the suite: 204 tests
-  (was documented as 121), 85% coverage (was 80%).
-- Flagged a real gap found while checking: there is no `tests/video/` directory
-  at all — `assembler.py` sits at ~16% coverage. Worth remembering if anyone
-  picks up `words_on_paper-4eh` — that work will need net-new tests, not just
-  edits to existing ones.
-- Cross-referenced `words_on_paper-4eh` from the new "Known Limitation" and
-  "Next Steps" sections so the OOM issue doesn't just live in beads, invisible
-  to someone reading CLAUDE.md.
+Plan for the streaming assembler:
 
-## Decisions and reasoning worth remembering
-
-- **Did not commit anything.** The working tree had substantial pre-existing
-  uncommitted changes (`animator.py`, `schema.py`, `text_renderer.py`, tests,
-  new example YAMLs, rendered `.mp4`s — looks like in-progress letter-spacing-
-  perspective work) that predated this session. Global instruction is "only
-  commit when explicitly asked" — didn't want to bundle someone's in-progress
-  work into a commit just because I happened to touch `CLAUDE.md` in the same
-  session. Only `CLAUDE.md` was modified by me and is still unstaged as of this
-  writing.
-- **Didn't fix the 8g7 positioning regression myself** — was asked to review,
-  not implement. Flagged it via ReportFindings but no beads issue was filed for
-  it (unlike fjy/4eh which were explicitly requested). If revisiting, consider
-  whether that regression deserves its own beads issue — it currently doesn't
-  have one.
+1. **Bounded producer/consumer over the existing process pool**, replacing
+   "submit all chunks up front" with a sliding window: keep at most
+   `max_pending_chunks` (candidate: `= max_workers`, i.e. 8 chunks × 100
+   frames = 800 frames resident at once, constant regardless of video
+   length) submitted at any time. As the oldest pending chunk's future
+   resolves, yield its frames one at a time and submit the next chunk to
+   backfill the window. This is a generator (`_chunked_frame_iterator` or
+   similar) wrapping the existing `_generate_frame_batch` — that helper
+   function itself needs no changes.
+2. **Bridge the generator to `VideoClip(make_frame=...)`**: since
+   `make_frame(t)` is pull-based and takes a time (not a frame index), wrap
+   the generator in a small stateful feeder that tracks the last-yielded
+   frame index and calls `next()` until it reaches `round(t * fps)`,
+   returning that frame. This assumes MoviePy pulls frames in
+   non-decreasing time order during `write_videofile` — **this is the
+   assumption I hadn't yet verified when interrupted.** If it doesn't hold
+   (e.g. audio processing interleaves calls, or there's read-ahead/seeking),
+   the feeder design needs to change to a proper bounded cache (dict keyed
+   by frame index + condition variable) instead of a simple "advance
+   forward" iterator.
+3. Font/background caching (`lru_cache`) is independent of the streaming
+   redesign and can be done first/separately — low risk, already verified
+   safe above.
 
 ## What's unfinished / next concrete step
 
-Nothing actively unfinished from my side — this was a review + planning +
-documentation session, no in-flight code edits of mine to resume. If there's a
-"next step" it's external to me: whoever picks up `words_on_paper-4eh` should
-start by reading that issue (it now has a fairly complete design brief) rather
-than re-investigating from scratch, and whoever wants the typing-effect
-positioning regression fixed will need a new beads issue filed first (it isn't
-tracked anywhere yet — only exists in this session's conversation and my prior
-ReportFindings output).
+1. **First thing on waking up**: verify how `moviepy==1.0.3`'s
+   `VideoClip.write_videofile` (and whatever frame-writing path it delegates
+   to, e.g. `ffmpeg_writer.py`) calls `make_frame` — specifically whether `t`
+   is always non-decreasing and called exactly once per frame. Read the
+   source directly in the venv:
+   `.venv/lib/python*/site-packages/moviepy/video/VideoClip.py` and
+   `moviepy/video/io/ffmpeg_writer.py` (use Read tool on the actual file
+   rather than piping through `python -c "...inspect.getsource..."` — a
+   `python -c` call to dump source got interrupted/rejected last session,
+   simple file Read is more transparent and avoids that friction).
+2. Once confirmed, write the actual design doc (bd issue asks for one before
+   implementation) covering: streaming approach, concurrency-bounding
+   mechanism, caching opportunities — then implement.
+3. Implement font caching and background caching (low-risk, can land as a
+   separate early commit before tackling the streaming pipeline).
+4. Implement the bounded producer/consumer + `VideoClip` swap in
+   `assembler.py`.
+5. Add tests — bd issue explicitly calls out that `tests/video/` doesn't
+   exist yet (~16% coverage on assembler.py). Need tests for: bounded memory
+   behavior (e.g. assert peak in-flight frame count doesn't scale with
+   duration — could mock `_generate_frame_batch` or use a small
+   `chunk_size`/`max_pending_chunks` in tests to keep them fast), correctness
+   of frame ordering/content vs. the old implementation, and ideally a
+   render-time comparison guard against regressing the 8-worker speedup.
+6. Don't forget `bd close words_on_paper-4eh` and the session-close git
+   push protocol once code lands.
 
-## Surprises / things not to repeat
+## Gotchas / things not to repeat
 
-- The codebase-memory MCP tools are gated behind a pre-tool-use hook that
-  blocks plain `Read`/likely `Grep` for code files ("BLOCKED: use
-  codebase-memory-mcp tools first"). When the project isn't indexed and graph
-  lookups 404, the hook still blocks Read — had to fall back to `Bash sed -n`
-  to view file contents in that gap. If this happens again: index first
-  (`list_projects` → `index_repository` if missing), *then* read, rather than
-  fighting the hook with workarounds.
-- `bd list --status=closed --sort=closed --reverse -n 1` is the reliable way to
-  get "most recently closed issue" — don't reach for `--json` + manual Python
-  sorting, the user pushed back on that and wants `bd`'s own flags used instead.
-- Global git aliases are configured (`git l`, `git s`, `git d`, `git di N`,
-  etc. — full list in memory file `feedback_git_aliases.md`) and the user
-  explicitly wants them preferred over raw `git log`/`status`/`diff`.
+- The user explicitly asked me to source the venv setup **in the parent
+  shell** themselves before starting the next session — I should not assume
+  `.venv` activation state at the start of next session; check `which
+  python` / `git status` fresh rather than trusting anything cached from
+  this session.
+- `moviepy` is not on `PATH`-visible Python by default — must
+  `source .venv/bin/activate` first (confirmed: `moviepy==1.0.3` is only
+  importable inside `.venv`).
+- codebase-memory-mcp project name is `Users-suthsc-src-Python-words_on_paper`
+  (hyphens replacing the path), not `words_on_paper` — the bare short name
+  isn't recognized as a project by `index_status`/`get_code_snippet`.
+- No code changes this session, so nothing needs committing/pushing before
+  handoff — the only file touched is this one.
