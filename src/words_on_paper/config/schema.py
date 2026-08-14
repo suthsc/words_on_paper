@@ -72,12 +72,28 @@ class ScaleEffect(BaseModel):
 
 
 class LetterSpacingEffect(BaseModel):
-    """Letter spacing effect to create perspective/distance illusion."""
+    """Letter spacing effect to create perspective/distance illusion.
+
+    Two spacing modes:
+    - Sequential (center_spacing=False): Characters spaced uniformly from start to end
+    - Centered (center_spacing=True): Spacing varies symmetrically around text center
+      (tighter in center, wider at edges)
+
+    Spacing values are automatically clamped to MIN_READABLE_SPACING (0.75) to maintain
+    text readability. Recommended ranges:
+    - Sequential: target_spacing >= 0.75 (0.75-1.5 recommended)
+    - Centered: target_spacing >= 0.75 (0.80-1.0 recommended, as edge spacing remains wide)
+    """
 
     enabled: bool = False
-    initial_spacing: float = Field(default=1.0, gt=0.0)
-    target_spacing: float = Field(default=0.7, gt=0.0)
+    initial_spacing: float = Field(
+        default=1.0, gt=0.0, description="Starting spacing multiplier"
+    )
+    target_spacing: float = Field(
+        default=0.7, gt=0.0, description="Target spacing (auto-clamped to 0.75 minimum)"
+    )
     apply_to_fade_out: bool = True
+    center_spacing: bool = False
     easing: Literal["linear", "ease_in", "ease_out", "ease_in_out"] = "ease_in_out"
 
 

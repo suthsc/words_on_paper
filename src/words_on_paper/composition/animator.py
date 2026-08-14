@@ -4,6 +4,15 @@ from __future__ import annotations
 
 import math
 
+MIN_READABLE_SPACING = 0.75
+"""
+Minimum letter spacing multiplier to maintain text readability.
+
+Text becomes unreadable when characters overlap due to spacing < 0.75.
+All calculated spacing values are automatically clamped to this minimum
+to prevent illegible text while preserving dramatic animation effects.
+"""
+
 
 def _get_animation_phase(
     current_time: float,
@@ -221,7 +230,7 @@ def calculate_letter_spacing(
         easing: Easing function type
 
     Returns:
-        Spacing multiplier (initial_spacing during fade, target_spacing during display)
+        Spacing multiplier (clamped to MIN_READABLE_SPACING to maintain readability)
     """
     phase, progress = _get_animation_phase(
         current_time, start_time, fade_in_duration, display_duration, fade_out_duration
@@ -231,15 +240,78 @@ def calculate_letter_spacing(
         return 1.0
     elif phase == "fade_in":
         eased_progress = _apply_easing(progress, easing)
-        return initial_spacing + (target_spacing - initial_spacing) * eased_progress
+        spacing = initial_spacing + (target_spacing - initial_spacing) * eased_progress
     elif phase == "display":
-        return target_spacing
+        spacing = target_spacing
     elif phase == "fade_out":
         if apply_to_fade_out:
             eased_progress = _apply_easing(progress, easing)
-            return target_spacing + (initial_spacing - target_spacing) * eased_progress
+            spacing = (
+                target_spacing + (initial_spacing - target_spacing) * eased_progress
+            )
         else:
-            return target_spacing
+            spacing = target_spacing
+    else:
+        spacing = 1.0
+
+    return max(spacing, MIN_READABLE_SPACING)
+
+
+def calculate_letter_spacing_centered(
+    current_time: float,
+    start_time: float,
+    fade_in_duration: float,
+    display_duration: float,
+    fade_out_duration: float,
+    initial_spacing: float,
+    target_spacing: float,
+    apply_to_fade_out: bool,
+    easing: str = "ease_in_out",
+) -> float:
+    """
+    Calculate letter spacing with symmetric distribution around text center.
+
+    During fade animations, spacing converges toward the center of the text
+    and diverges back outward (if apply_to_fade_out=True). Center characters
+    maintain minimum readable spacing (MIN_READABLE_SPACING).
+
+    Args:
+        current_time: Current time in seconds
+        start_time: When text animation starts
+        fade_in_duration: Duration of fade in
+        display_duration: Duration at full display
+        fade_out_duration: Duration of fade out
+        initial_spacing: Starting/ending spacing multiplier (e.g., 1.0 for normal)
+        target_spacing: Target spacing multiplier during display (e.g., 0.8 for closer)
+        apply_to_fade_out: If True, diverges back to initial_spacing during fade-out
+        easing: Easing function type
+
+    Returns:
+        Spacing multiplier (clamped to MIN_READABLE_SPACING to maintain readability)
+    """
+    phase, progress = _get_animation_phase(
+        current_time, start_time, fade_in_duration, display_duration, fade_out_duration
+    )
+
+    if phase == "before" or phase == "after":
+        return 1.0
+    elif phase == "fade_in":
+        eased_progress = _apply_easing(progress, easing)
+        spacing = initial_spacing + (target_spacing - initial_spacing) * eased_progress
+    elif phase == "display":
+        spacing = target_spacing
+    elif phase == "fade_out":
+        if apply_to_fade_out:
+            eased_progress = _apply_easing(progress, easing)
+            spacing = (
+                target_spacing + (initial_spacing - target_spacing) * eased_progress
+            )
+        else:
+            spacing = target_spacing
+    else:
+        spacing = 1.0
+
+    return max(spacing, MIN_READABLE_SPACING)
 
     return 1.0
 

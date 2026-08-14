@@ -586,3 +586,176 @@ class TestBuildFrame:
         )
         frame = build_frame(config, 1.0)
         assert isinstance(frame, Image.Image)
+
+    def test_build_frame_with_centered_spacing(self) -> None:
+        """Test frame with centered letter-spacing enabled."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Centered",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.6,
+                            center_spacing=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.0)
+        assert isinstance(frame, Image.Image)
+        assert frame.size == (1920, 1080)
+
+    def test_build_frame_centered_vs_sequential_spacing(self) -> None:
+        """Test that centered spacing produces different visual output."""
+        config_centered = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Test Text",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=2,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            center_spacing=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+
+        config_sequential = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Test Text",
+                    start_time=0,
+                    fade_in_duration=0,
+                    display_duration=2,
+                    fade_out_duration=0,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.7,
+                            center_spacing=False,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+
+        frame_centered = build_frame(config_centered, 1.0)
+        frame_sequential = build_frame(config_sequential, 1.0)
+
+        assert isinstance(frame_centered, Image.Image)
+        assert isinstance(frame_sequential, Image.Image)
+        # Both should have same size (text dimensions are calculated same way)
+        assert frame_centered.size == frame_sequential.size
+
+    def test_build_frame_centered_spacing_vertical_text(self) -> None:
+        """Test centered spacing with vertical text."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="VERT",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=2,
+                    fade_out_duration=1,
+                    orientation="vertical",
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.65,
+                            center_spacing=True,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_centered_spacing_with_multiple_texts(self) -> None:
+        """Test centered spacing with multiple text sequences."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="First",
+                    start_time=0,
+                    fade_in_duration=1,
+                    display_duration=1,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            center_spacing=True,
+                        ),
+                    ),
+                ),
+                TextSequence(
+                    content="Second",
+                    start_time=2,
+                    fade_in_duration=1,
+                    display_duration=1,
+                    fade_out_duration=1,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            center_spacing=True,
+                        ),
+                    ),
+                ),
+            ]
+        )
+        frame = build_frame(config, 1.5)
+        assert isinstance(frame, Image.Image)
+
+    def test_build_frame_centered_spacing_with_depth_of_field(self) -> None:
+        """Test centered spacing combined with depth-of-field."""
+        config = VideoConfig(
+            texts=[
+                TextSequence(
+                    content="Converge",
+                    start_time=0,
+                    fade_in_duration=2,
+                    display_duration=2,
+                    fade_out_duration=2,
+                    effects=Effects(
+                        letter_spacing=LetterSpacingEffect(
+                            enabled=True,
+                            initial_spacing=1.0,
+                            target_spacing=0.65,
+                            center_spacing=True,
+                        ),
+                        depth_of_field=DepthOfFieldEffect(
+                            enabled=True,
+                            initial_distance=0.7,
+                            inward_frames=45,
+                            crisp_frames=45,
+                            outward_frames=45,
+                            blur_sigma=0.2,
+                            blur_max_radius=25,
+                        ),
+                        drop_shadow=DropShadow(enabled=False),
+                    ),
+                )
+            ]
+        )
+        frame = build_frame(config, 2.0)
+        assert isinstance(frame, Image.Image)

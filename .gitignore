@@ -137,3 +137,5 @@ Thumbs.db
 .dolt/
 *.db
 .beads-credential-key
+
+*.mp4

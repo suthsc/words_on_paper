@@ -125,6 +125,7 @@ def _render_text_layer(
 
     # Calculate letter spacing effect
     letter_spacing = 1.0
+    center_spacing = False
     if text_seq.effects.letter_spacing.enabled:
         letter_spacing = calculate_letter_spacing(
             current_time=current_time,
@@ -137,6 +138,7 @@ def _render_text_layer(
             apply_to_fade_out=text_seq.effects.letter_spacing.apply_to_fade_out,
             easing=text_seq.effects.letter_spacing.easing,
         )
+        center_spacing = text_seq.effects.letter_spacing.center_spacing
 
     # Get dimensions of rendered text (for accurate positioning)
     text_width, text_height = get_text_dimensions(
@@ -145,6 +147,7 @@ def _render_text_layer(
         text_seq.font.size,
         text_seq.orientation,
         letter_spacing=letter_spacing,
+        center_spacing=center_spacing,
     )
 
     # Render the text
@@ -155,6 +158,7 @@ def _render_text_layer(
         text_seq.font.color,
         text_seq.orientation,
         letter_spacing=letter_spacing,
+        center_spacing=center_spacing,
     )
 
     # Calculate and apply scale effect

@@ -24,7 +24,8 @@
       "Bash(cat)",
       "Bash(python3 /tmp/update_frame_builder.py)",
       "Bash(python3 /tmp/update_paper_texture.py)",
-      "Edit"
+      "Edit",
+      "mcp__codebase-memory-mcp__list_projects"
     ]
   }
 }

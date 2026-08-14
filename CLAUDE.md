@@ -8,7 +8,7 @@ This file provides guidance to Claude Code when working with this project.
 
 ## Development Environment
 
-This is a Python 3.9+ project managed with `uv` (fast Python package installer).
+This is a Python 3.10+ project managed with `uv` (fast Python package installer), using a `src/` layout (package lives under `src/words_on_paper/`).
 
 ### Quick Setup
 
@@ -41,11 +41,11 @@ black .                                   # Format code
 black --check .                           # Check formatting
 ruff check .                              # Lint code
 ruff check --fix .                        # Auto-fix issues
-mypy words_on_paper                       # Type check
+mypy src/words_on_paper                   # Type check (src/ layout — `mypy words_on_paper` will fail)
 isort .                                   # Sort imports
 
 # Run all checks (pre-commit style)
-black --check . && ruff check . && mypy words_on_paper && pytest
+black --check . && ruff check . && mypy src/words_on_paper && pytest
 ```
 
 **CLI Testing:**
@@ -61,33 +61,40 @@ words-on-paper generate examples/simple_fade.yaml -o test.mp4  # Generate video
 
 ```
 words_on_paper/
-├── words_on_paper/           # Main package
-│   ├── __init__.py          # Public API exports
-│   ├── __main__.py          # Entry point for -m
-│   ├── cli.py               # Click CLI implementation
-│   ├── config/              # Configuration handling
-│   │   ├── schema.py        # Pydantic models
-│   │   └── loader.py        # Load/parse YAML/JSON
-│   ├── rendering/           # Text rendering
-│   │   ├── text_renderer.py # PIL text-to-image
-│   │   └── fonts.py         # Font loading
-│   ├── background/          # Background generation
-│   │   └── paper_texture.py # Paper texture with noise
-│   ├── composition/         # Frame building
-│   │   ├── frame_builder.py # Assemble frames
-│   │   ├── animator.py      # Calculate opacity/typing
-│   │   └── layer_manager.py # Z-ordering & compositing
-│   ├── video/               # Video output
-│   │   └── assembler.py     # MoviePy video generation
-│   └── utils/               # Utilities
-│       ├── color.py         # Color parsing/conversion
-│       └── timing.py        # Frame/time conversions
-├── tests/                   # Unit tests (mirror package structure)
+├── src/
+│   └── words_on_paper/       # Main package (src layout)
+│       ├── __init__.py      # Public API exports
+│       ├── __main__.py      # Entry point for -m
+│       ├── main.py          # Entry point helper
+│       ├── cli.py           # Click CLI implementation
+│       ├── config/          # Configuration handling
+│       │   ├── schema.py    # Pydantic models
+│       │   └── loader.py    # Load/parse YAML/JSON
+│       ├── rendering/       # Text rendering
+│       │   ├── text_renderer.py # PIL text-to-image
+│       │   └── fonts.py     # Font loading
+│       ├── background/      # Background generation
+│       │   └── paper_texture.py # Paper texture with noise
+│       ├── composition/     # Frame building
+│       │   ├── frame_builder.py # Assemble frames
+│       │   ├── animator.py  # Calculate opacity/typing/effects
+│       │   └── layer_manager.py # Z-ordering & compositing
+│       ├── video/           # Video output
+│       │   └── assembler.py # MoviePy video generation (parallel frame batches)
+│       └── utils/           # Utilities
+│           ├── color.py     # Color parsing/conversion
+│           ├── image.py     # RGBA conversion helpers
+│           └── timing.py    # Frame/time conversions
+├── tests/                   # Unit tests (mirror src/words_on_paper structure)
 ├── examples/                # Example configurations
+├── docs/                    # Additional docs (requirements.md)
 ├── pyproject.toml          # Project configuration
 ├── CLAUDE.md               # This file
+├── AGENTS.md                # Agent-facing notes
 └── README.md               # User documentation
 ```
+
+Note: `cli.py` and `main.py` live directly under `src/words_on_paper/`, not in a separate `cli/` subpackage.
 
 ### Module Overview
 
@@ -120,32 +127,35 @@ Key design: NumPy-based noise generation for performance.
 - **animator.py**: Calculate animation properties per frame
   - `calculate_text_opacity()`: Fade in/out curves
   - `calculate_visible_chars()`: Typing effect progress
+  - `calculate_scale_factor()`, `calculate_letter_spacing()` / `calculate_letter_spacing_centered()`, `calculate_depth_of_field()`: scale, letter-spacing (incl. centered/perspective), and depth-of-field effect curves
 - **frame_builder.py**: Build complete frames
   - Compose background + text layers
-  - Apply effects (drop shadow, opacity)
+  - Apply effects (typing, drop shadow, scale, letter spacing, depth of field, opacity)
   - Calculate positioning
 - **layer_manager.py**: Z-order and composite layers
   - Sort by z_index
   - Handle alpha compositing
 
-Key design: Stateless frame generation from config + time.
+Key design: Stateless frame generation from config + time — each frame is built fresh with no cross-frame caching yet (see `words_on_paper-4eh` in beads for planned streaming/memory work).
 
 #### video/ - Video Assembly
 - **assembler.py**: MoviePy integration
-  - Generate frame sequence
-  - Create ImageSequenceClip
+  - Generates frames in parallel chunks via `ProcessPoolExecutor` (8 workers, ~100 frames/chunk)
+  - Collects all frames in memory, builds an `ImageSequenceClip`
   - Write video file with progress bar
+  - Known limitation: long videos (>~1 min) can OOM because all frames are materialized before writing; see `words_on_paper-4eh`
 
 Key design: Encapsulates MoviePy complexity, uses tqdm for progress.
 
 #### utils/ - Utilities
 - **color.py**: Hex/RGB/RGBA color parsing
+- **image.py**: `ensure_rgba()` and other RGBA conversion helpers
 - **timing.py**: Frame ↔ time conversions
 
 Key design: Simple utilities, thoroughly tested.
 
-#### cli/ - Command-Line Interface
-- **cli.py**: Click commands (generate, validate)
+#### Command-Line Interface
+- **cli.py**: Click commands (generate, validate) — lives directly under `src/words_on_paper/`, not a `cli/` subpackage
 - **__main__.py**: Entry point
 
 Key design: Simple, user-friendly error messages.
@@ -189,7 +199,7 @@ Pre-commit automatically runs:
 - Content: `content`, `orientation` (horizontal/vertical)
 - Positioning: `position.mode` (center/absolute/relative)
 - Appearance: `font` (family, size, color)
-- Effects: `effects.typing` (for typing animation), `effects.drop_shadow`
+- Effects (`effects`): `typing` (reveal animation), `drop_shadow`, `scale` (scale/depth during fades), `letter_spacing` (sequential or `center_spacing` perspective illusion, clamped to a minimum readable spacing), `depth_of_field` (focal-plane blur/alpha)
 - Layering: `z_index` (higher = on top)
 
 ### Validation
@@ -210,6 +220,8 @@ Each module has comprehensive unit tests:
 - **composition**: Animation calculations, frame building, positioning
 - **utils**: Color conversions, timing calculations
 
+**Coverage gap**: there is no `tests/video/` directory — `video/assembler.py` (parallel frame generation, `ImageSequenceClip` assembly, file writing) is essentially untested (~16% coverage). Any work on the assembler (e.g. the streaming/memory redesign in `words_on_paper-4eh`) should add tests here.
+
 ### Integration Tests
 - `test_frame_builder.py`: End-to-end frame generation
 - Load config → Build frames → Verify output
@@ -226,12 +238,16 @@ Each module has comprehensive unit tests:
 - Background generation: ~50-100ms per frame (NumPy)
 - Compositing: ~50-200ms per frame (PIL)
 - Total: ~1-3 seconds per 1080p frame
+- `video/assembler.py` parallelizes frame generation across an 8-worker `ProcessPoolExecutor` in ~100-frame chunks
+
+### Known Limitation: Long Videos Can OOM
+Because all generated frames are currently held in memory before being handed to `ImageSequenceClip`, videos longer than roughly one minute can run out of memory. A streaming/bounded-memory redesign (built on MoviePy's `VideoClip(make_frame=...)` instead of `ImageSequenceClip`) is planned — see beads issue `words_on_paper-4eh`.
 
 ### Optimization Tips
 - Use lower resolution for previews
 - Reduce texture_intensity (affects background generation)
 - Minimize text sequences and effects
-- Cache fonts if needed in future
+- Font loading (`rendering/fonts.py:load_font()`) and static background generation are not currently cached across frames — caching them is a known low-risk win
 
 ## Extending the System
 
@@ -271,8 +287,11 @@ Each module has comprehensive unit tests:
 ## Recent Changes
 
 - Renamed package from `my_python_project` to `words_on_paper`
-- Added all core modules with comprehensive testing (121 tests, 80% coverage)
-- Created 4 example configurations (simple_fade, typing_effect, overlapping_phrases, complete_demo)
+- Moved package to a `src/` layout (`src/words_on_paper/`)
+- Added all core modules with comprehensive testing (204 tests, 85% coverage)
+- Added scale, letter-spacing (sequential, centered, perspective), and depth-of-field effects
+- Grew example configurations to 11 (including letter-spacing and multi-scene examples like `waiting_for_godot_full_scene.yaml`)
+- Parallelized frame generation in `video/assembler.py` via `ProcessPoolExecutor`
 - Implemented CLI with validate and generate commands
 - Updated dependencies to include MoviePy, Pillow, Pydantic, PyYAML, Click, NumPy, tqdm
 
@@ -280,7 +299,7 @@ Each module has comprehensive unit tests:
 
 **Production**:
 - `moviepy>=1.0.3` - Video composition
-- `pillow>=10.0.0` - Image/text rendering
+- `pillow>=12.1.0` - Image/text rendering
 - `pydantic>=2.0.0` - Configuration validation
 - `pyyaml>=6.0` - YAML support
 - `click>=8.0.0` - CLI framework
@@ -302,7 +321,7 @@ Each module has comprehensive unit tests:
 |-------|----------|
 | `ModuleNotFoundError` | Run `uv pip install -e ".[dev]"` |
 | Tests fail with coverage | Run `pytest --cov=words_on_paper` |
-| Type checking fails | Run `mypy words_on_paper` and fix issues |
+| Type checking fails | Run `mypy src/words_on_paper` and fix issues |
 | Formatting inconsistencies | Run `black . && isort .` |
 | FFmpeg not found | Install FFmpeg for your system |
 | Font not found | Check system font paths (macOS: ~/Library/Fonts) |
@@ -310,16 +329,20 @@ Each module has comprehensive unit tests:
 ## Next Steps / Future Work
 
 - [ ] Custom font file support via config
-- [ ] Additional animation effects (scale, rotate, slide)
+- [x] Scale effect (done — see `effects.scale`)
+- [ ] Additional animation effects (rotate, slide)
 - [ ] Multi-line text with line breaking
 - [ ] Background video support
 - [ ] Audio synchronization
 - [ ] Performance profiling and optimization
 - [ ] Additional output formats (GIF, WebP)
+- [ ] Streaming/bounded-memory video rendering for videos >~1 minute (tracked: `words_on_paper-4eh`)
+
+Full backlog and in-progress work is tracked in beads (`bd ready`, `bd list`), not this list — treat this section as a high-level, occasionally-stale wishlist.
 
 ---
 
-**Last Updated**: 2026-02-01
+**Last Updated**: 2026-08-13
 **Current Version**: 0.1.0
 
 

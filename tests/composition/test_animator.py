@@ -4,6 +4,7 @@ import pytest
 
 from words_on_paper.composition.animator import (
     calculate_letter_spacing,
+    calculate_letter_spacing_centered,
     calculate_scale_factor,
     calculate_text_opacity,
     calculate_visible_chars,
@@ -253,32 +254,32 @@ class TestCalculateLetterSpacing:
     def test_letter_spacing_fade_in_middle(self) -> None:
         """Test spacing at fade in middle."""
         spacing = calculate_letter_spacing(1.5, 1, 1, 2, 1, 1.0, 0.7, True, "linear")
-        assert 0.7 < spacing < 1.0
+        assert 0.75 <= spacing < 1.0
 
     def test_letter_spacing_fade_in_end(self) -> None:
-        """Test spacing at fade in end."""
+        """Test spacing at fade in end (clamped to minimum readable spacing)."""
         spacing = calculate_letter_spacing(2, 1, 1, 2, 1, 1.0, 0.7, True, "linear")
-        assert spacing == pytest.approx(0.7)
+        assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_display_phase(self) -> None:
-        """Test spacing during display phase."""
+        """Test spacing during display phase (clamped to minimum readable spacing)."""
         spacing = calculate_letter_spacing(2.5, 1, 1, 2, 1, 1.0, 0.7, True)
-        assert spacing == pytest.approx(0.7)
+        assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_display_end(self) -> None:
-        """Test spacing at display end."""
+        """Test spacing at display end (clamped to minimum readable spacing)."""
         spacing = calculate_letter_spacing(4, 1, 1, 2, 1, 1.0, 0.7, True)
-        assert spacing == pytest.approx(0.7)
+        assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_fade_out_start(self) -> None:
-        """Test spacing at fade out start with apply_to_fade_out=True."""
+        """Test spacing at fade out start with apply_to_fade_out=True (clamped)."""
         spacing = calculate_letter_spacing(4.0, 1, 1, 2, 1, 1.0, 0.7, True, "linear")
-        assert spacing == pytest.approx(0.7)
+        assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_fade_out_middle(self) -> None:
         """Test spacing at fade out middle with apply_to_fade_out=True."""
         spacing = calculate_letter_spacing(4.5, 1, 1, 2, 1, 1.0, 0.7, True, "linear")
-        assert 0.7 < spacing < 1.0
+        assert 0.75 <= spacing < 1.0
 
     def test_letter_spacing_fade_out_end(self) -> None:
         """Test spacing at fade out end with apply_to_fade_out=True."""
@@ -286,9 +287,9 @@ class TestCalculateLetterSpacing:
         assert spacing == pytest.approx(1.0)
 
     def test_letter_spacing_fade_out_disabled(self) -> None:
-        """Test spacing during fade out with apply_to_fade_out=False."""
+        """Test spacing during fade out with apply_to_fade_out=False (clamped)."""
         spacing = calculate_letter_spacing(4.5, 1, 1, 2, 1, 1.0, 0.7, False)
-        assert spacing == pytest.approx(0.7)
+        assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_with_different_values(self) -> None:
         """Test with custom initial and target spacing values."""
@@ -297,27 +298,94 @@ class TestCalculateLetterSpacing:
         assert spacing == pytest.approx(1.0)
 
     def test_letter_spacing_easing_linear(self) -> None:
-        """Test linear easing."""
-        # At 0.5 progress in fade-in
+        """Test linear easing with target below minimum (will be clamped)."""
+        # At 0.5 progress in fade-in: 1.0 + (0.5 - 1.0) * 0.5 = 0.75 (clamped)
         spacing = calculate_letter_spacing(1.5, 1, 1, 2, 1, 1.0, 0.5, True, "linear")
         assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_easing_ease_in(self) -> None:
-        """Test ease_in easing."""
+        """Test ease_in easing (clamped to minimum readable spacing)."""
+        # ease_in at 0.5 progress = 0.5^2 = 0.25, so 1.0 + (0.0 - 1.0) * 0.25 = 0.75 (clamped)
         spacing = calculate_letter_spacing(1.5, 1, 1, 2, 1, 1.0, 0.0, True, "ease_in")
-        # ease_in at 0.5 progress = 0.5^2 = 0.25
         assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_easing_ease_out(self) -> None:
-        """Test ease_out easing."""
+        """Test ease_out easing (clamped to minimum readable spacing)."""
+        # ease_out at 0.5 progress = 1 - (1-0.5)^2 = 0.75, so 1.0 - 0.75 = 0.25 (clamped to 0.75)
         spacing = calculate_letter_spacing(1.5, 1, 1, 2, 1, 1.0, 0.0, True, "ease_out")
-        # ease_out at 0.5 progress = 1 - (1-0.5)^2 = 0.75, then spacing = 1.0 - 0.75 = 0.25
-        assert spacing == pytest.approx(0.25)
+        assert spacing == pytest.approx(0.75)
 
     def test_letter_spacing_easing_ease_in_out(self) -> None:
-        """Test ease_in_out easing."""
+        """Test ease_in_out easing (clamped to minimum readable spacing)."""
+        # ease_in_out at 0.5 progress = 0.5, so 1.0 - 0.5 = 0.5 (clamped to 0.75)
         spacing = calculate_letter_spacing(
             1.5, 1, 1, 2, 1, 1.0, 0.0, True, "ease_in_out"
         )
-        # ease_in_out at 0.5 progress = 0.5
-        assert spacing == pytest.approx(0.5)
+        assert spacing == pytest.approx(0.75)
+
+
+class TestCalculateLetterSpacingCentered:
+    """Test centered letter spacing calculation."""
+
+    def test_letter_spacing_centered_before_animation(self) -> None:
+        """Test centered spacing is 1.0 before animation starts."""
+        spacing = calculate_letter_spacing_centered(0, 1, 1, 2, 1, 1.0, 0.7, True)
+        assert spacing == 1.0
+
+    def test_letter_spacing_centered_after_animation(self) -> None:
+        """Test centered spacing is 1.0 after animation ends."""
+        spacing = calculate_letter_spacing_centered(5, 1, 1, 2, 1, 1.0, 0.7, True)
+        assert spacing == 1.0
+
+    def test_letter_spacing_centered_fade_in_start(self) -> None:
+        """Test centered spacing at fade in start."""
+        spacing = calculate_letter_spacing_centered(
+            1, 1, 1, 2, 1, 1.0, 0.7, True, "linear"
+        )
+        assert spacing == pytest.approx(1.0)
+
+    def test_letter_spacing_centered_fade_in_middle(self) -> None:
+        """Test centered spacing at fade in middle."""
+        spacing = calculate_letter_spacing_centered(
+            1.5, 1, 1, 2, 1, 1.0, 0.7, True, "linear"
+        )
+        assert 0.75 <= spacing < 1.0
+
+    def test_letter_spacing_centered_fade_in_end(self) -> None:
+        """Test centered spacing at fade in end (clamped to minimum readable spacing)."""
+        spacing = calculate_letter_spacing_centered(
+            2, 1, 1, 2, 1, 1.0, 0.7, True, "linear"
+        )
+        assert spacing == pytest.approx(0.75)
+
+    def test_letter_spacing_centered_display_phase(self) -> None:
+        """Test centered spacing during display phase (clamped to minimum readable spacing)."""
+        spacing = calculate_letter_spacing_centered(2.5, 1, 1, 2, 1, 1.0, 0.7, True)
+        assert spacing == pytest.approx(0.75)
+
+    def test_letter_spacing_centered_fade_out_enabled(self) -> None:
+        """Test centered spacing during fade out with apply_to_fade_out=True."""
+        spacing = calculate_letter_spacing_centered(
+            4.5, 1, 1, 2, 1, 1.0, 0.7, True, "linear"
+        )
+        assert 0.75 <= spacing < 1.0
+
+    def test_letter_spacing_centered_fade_out_disabled(self) -> None:
+        """Test centered spacing during fade out with apply_to_fade_out=False (clamped)."""
+        spacing = calculate_letter_spacing_centered(4.5, 1, 1, 2, 1, 1.0, 0.7, False)
+        assert spacing == pytest.approx(0.75)
+
+    def test_letter_spacing_centered_same_as_sequential(self) -> None:
+        """Test that centered and sequential return same spacing value.
+
+        Both functions return the same spacing multiplier; the difference is
+        how that multiplier is applied during rendering (sequential vs centered).
+        """
+        time = 1.5
+        spacing_seq = calculate_letter_spacing(
+            time, 1, 1, 2, 1, 1.0, 0.7, True, "linear"
+        )
+        spacing_centered = calculate_letter_spacing_centered(
+            time, 1, 1, 2, 1, 1.0, 0.7, True, "linear"
+        )
+        assert spacing_seq == spacing_centered

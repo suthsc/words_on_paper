@@ -190,6 +190,30 @@ class TestLetterSpacingEffect:
             effect = LetterSpacingEffect(easing=easing_type)
             assert effect.easing == easing_type
 
+    def test_letter_spacing_effect_center_spacing_default(self) -> None:
+        """Test center_spacing defaults to False."""
+        effect = LetterSpacingEffect()
+        assert not effect.center_spacing
+
+    def test_letter_spacing_effect_center_spacing_enabled(self) -> None:
+        """Test center_spacing can be enabled."""
+        effect = LetterSpacingEffect(center_spacing=True)
+        assert effect.center_spacing
+
+    def test_letter_spacing_effect_center_spacing_with_other_params(self) -> None:
+        """Test center_spacing combined with other parameters."""
+        effect = LetterSpacingEffect(
+            enabled=True,
+            initial_spacing=1.2,
+            target_spacing=0.6,
+            center_spacing=True,
+            easing="ease_in_out",
+        )
+        assert effect.enabled
+        assert effect.center_spacing
+        assert effect.initial_spacing == 1.2
+        assert effect.target_spacing == 0.6
+
 
 class TestEffects:
     """Test Effects configuration."""
