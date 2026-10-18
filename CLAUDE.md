@@ -80,7 +80,7 @@ words_on_paper/
 │       │   ├── animator.py  # Calculate opacity/typing/effects
 │       │   └── layer_manager.py # Z-ordering & compositing
 │       ├── video/           # Video output
-│       │   └── assembler.py # MoviePy video generation (parallel frame batches)
+│       │   └── assembler.py # MoviePy video generation (streamed parallel frame batches)
 │       └── utils/           # Utilities
 │           ├── color.py     # Color parsing/conversion
 │           ├── image.py     # RGBA conversion helpers
@@ -136,16 +136,15 @@ Key design: NumPy-based noise generation for performance.
   - Sort by z_index
   - Handle alpha compositing
 
-Key design: Stateless frame generation from config + time — each frame is built fresh with no cross-frame caching yet (see `words_on_paper-4eh` in beads for planned streaming/memory work).
+Key design: Stateless frame generation from config + time — each frame is built fresh. The only cross-frame caching is of pure lookups: `load_font()` and `generate_background()` are wrapped in `@lru_cache` (per worker process). The cached background is shared, so callers must copy it before mutating it (`ensure_rgba()` and `composite_layers()` both do).
 
 #### video/ - Video Assembly
 - **assembler.py**: MoviePy integration
-  - Generates frames in parallel chunks via `ProcessPoolExecutor` (8 workers, ~100 frames/chunk)
-  - Collects all frames in memory, builds an `ImageSequenceClip`
-  - Write video file with progress bar
-  - Known limitation: long videos (>~1 min) can OOM because all frames are materialized before writing; see `words_on_paper-4eh`
+  - `_stream_frames()` generates frames in parallel chunks via `ProcessPoolExecutor` (`MAX_WORKERS = 8`, `CHUNK_SIZE = 100`) and yields them in order, keeping at most `MAX_WORKERS` chunks in flight
+  - `_SequentialFrameFeeder` adapts that iterator to MoviePy's `make_frame(t)`, relying on `write_videofile` requesting `t` in non-decreasing order
+  - `generate_video()` builds a `VideoClip(make_frame=...)` sized to exactly `total_frames` and writes it with a per-chunk tqdm progress bar
 
-Key design: Encapsulates MoviePy complexity, uses tqdm for progress.
+Key design: Encapsulates MoviePy complexity; peak memory is bounded at ~`MAX_WORKERS * CHUNK_SIZE` frames regardless of video length.
 
 #### utils/ - Utilities
 - **color.py**: Hex/RGB/RGBA color parsing
@@ -220,7 +219,7 @@ Each module has comprehensive unit tests:
 - **composition**: Animation calculations, frame building, positioning
 - **utils**: Color conversions, timing calculations
 
-**Coverage gap**: there is no `tests/video/` directory — `video/assembler.py` (parallel frame generation, `ImageSequenceClip` assembly, file writing) is essentially untested (~16% coverage). Any work on the assembler (e.g. the streaming/memory redesign in `words_on_paper-4eh`) should add tests here.
+- **video**: `tests/video/test_assembler.py` covers frame ordering, the in-flight bound in `_stream_frames()`, `_SequentialFrameFeeder` stepping, and an end-to-end `generate_video()` frame-count check (~94% coverage of `assembler.py`)
 
 ### Integration Tests
 - `test_frame_builder.py`: End-to-end frame generation
@@ -238,16 +237,16 @@ Each module has comprehensive unit tests:
 - Background generation: ~50-100ms per frame (NumPy)
 - Compositing: ~50-200ms per frame (PIL)
 - Total: ~1-3 seconds per 1080p frame
-- `video/assembler.py` parallelizes frame generation across an 8-worker `ProcessPoolExecutor` in ~100-frame chunks
+- `video/assembler.py` parallelizes frame generation across an 8-worker `ProcessPoolExecutor` in 100-frame chunks
+- Background generation and font loading are cached (`@lru_cache`), so their cost is paid once per worker process rather than per frame
 
-### Known Limitation: Long Videos Can OOM
-Because all generated frames are currently held in memory before being handed to `ImageSequenceClip`, videos longer than roughly one minute can run out of memory. A streaming/bounded-memory redesign (built on MoviePy's `VideoClip(make_frame=...)` instead of `ImageSequenceClip`) is planned — see beads issue `words_on_paper-4eh`.
+### Memory
+Frames are streamed to the encoder rather than materialized up front, so memory stays roughly constant (~`MAX_WORKERS * CHUNK_SIZE` frames, i.e. ~800 frames) regardless of video length. Lower `MAX_WORKERS` or `CHUNK_SIZE` in `video/assembler.py` if that is still too much at high resolutions.
 
 ### Optimization Tips
 - Use lower resolution for previews
 - Reduce texture_intensity (affects background generation)
 - Minimize text sequences and effects
-- Font loading (`rendering/fonts.py:load_font()`) and static background generation are not currently cached across frames — caching them is a known low-risk win
 
 ## Extending the System
 
@@ -288,7 +287,9 @@ Because all generated frames are currently held in memory before being handed to
 
 - Renamed package from `my_python_project` to `words_on_paper`
 - Moved package to a `src/` layout (`src/words_on_paper/`)
-- Added all core modules with comprehensive testing (204 tests, 85% coverage)
+- Added all core modules with comprehensive testing (213 tests, 91% coverage)
+- Streamed video frames through `VideoClip(make_frame=...)` instead of materializing them all, fixing OOM on long videos; cached font loading and background generation
+- Clamped absolute/relative text positions to frame bounds; fixed typing-effect position drift
 - Added scale, letter-spacing (sequential, centered, perspective), and depth-of-field effects
 - Grew example configurations to 11 (including letter-spacing and multi-scene examples like `waiting_for_godot_full_scene.yaml`)
 - Parallelized frame generation in `video/assembler.py` via `ProcessPoolExecutor`
@@ -336,13 +337,13 @@ Because all generated frames are currently held in memory before being handed to
 - [ ] Audio synchronization
 - [ ] Performance profiling and optimization
 - [ ] Additional output formats (GIF, WebP)
-- [ ] Streaming/bounded-memory video rendering for videos >~1 minute (tracked: `words_on_paper-4eh`)
+- [x] Streaming/bounded-memory video rendering for long videos (done — `words_on_paper-4eh`)
 
 Full backlog and in-progress work is tracked in beads (`bd ready`, `bd list`), not this list — treat this section as a high-level, occasionally-stale wishlist.
 
 ---
 
-**Last Updated**: 2026-08-13
+**Last Updated**: 2026-10-18
 **Current Version**: 0.1.0
 
 
