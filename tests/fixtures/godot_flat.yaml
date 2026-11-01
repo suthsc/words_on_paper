@@ -1,0 +1,850 @@
+video:
+  width: 1920
+  height: 1080
+  fps: 30
+
+background:
+  type: paper
+  color: "#D9D9D9"
+  texture_intensity: 0.1
+
+texts:
+  # ===== OPENING SEQUENCE (12s) =====
+  - content: "Waiting for Godot"
+    start_time: 0.0
+    fade_in_duration: 2.0
+    display_duration: 3.0
+    fade_out_duration: 2.0
+
+    font:
+      family: Georgia
+      size: 96
+      color: "#1A1A1A"
+
+    position:
+      mode: center
+
+    effects:
+      scale:
+        enabled: true
+        initial_scale: 0.5
+        apply_to_fade_out: true
+        easing: ease_out
+      drop_shadow:
+        enabled: true
+        offset_x: 3
+        offset_y: 3
+        blur_radius: 3
+        color: "#00000050"
+
+    z_index: 20
+
+  - content: "A Play in Two Acts"
+    start_time: 7.0
+    fade_in_duration: 1.0
+    display_duration: 2.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 48
+      color: "#555555"
+
+    position:
+      mode: center
+
+    z_index: 19
+
+  - content: "By Samuel Beckett"
+    start_time: 11.0
+    fade_in_duration: 1.0
+    display_duration: 2.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 42
+      color: "#777777"
+
+    position:
+      mode: center
+
+    z_index: 19
+
+  # ===== SCENE SETTING (8s) =====
+  - content: "Act I, Scene 1"
+    start_time: 14.0
+    fade_in_duration: 1.0
+    display_duration: 2.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 72
+      color: "#2C3E50"
+
+    position:
+      mode: center
+
+    z_index: 18
+
+  - content: "A country road. A tree. Evening. The sun is low on the horizon."
+    start_time: 18.0
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 44
+      color: "#7F8C8D"
+
+    position:
+      mode: center
+
+    z_index: 18
+
+  # ===== PART 1: OPENING EXCHANGE (25s) =====
+  - content: "VLADIMIR: Nothing to be done."
+    start_time: 22.0
+    fade_in_duration: 0.8
+    display_duration: 3.0
+    fade_out_duration: 0.8
+
+    font:
+      family: Courier
+      size: 44
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.25
+
+    effects:
+      drop_shadow:
+        enabled: true
+        offset_x: 2
+        offset_y: 2
+        blur_radius: 2
+        color: "#00000030"
+
+    z_index: 15
+
+  - content: "(He beats his boots against the ground)"
+    start_time: 25.8
+    fade_in_duration: 0.5
+    display_duration: 2.0
+    fade_out_duration: 0.5
+
+    font:
+      family: Georgia
+      size: 36
+      color: "#95A5A6"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.35
+
+    z_index: 14
+
+  - content: "ESTRAGON: I'm beginning to come round to that opinion."
+    start_time: 28.3
+    fade_in_duration: 0.8
+    display_duration: 3.0
+    fade_out_duration: 0.8
+
+    font:
+      family: Courier
+      size: 44
+      color: "#8B4513"
+
+    position:
+      mode: relative
+      x: 0.65
+      y: 0.45
+
+    effects:
+      drop_shadow:
+        enabled: true
+        offset_x: 2
+        offset_y: 2
+        blur_radius: 2
+        color: "#00000030"
+
+    z_index: 15
+
+  - content: "(He tries to pull off his boots)"
+    start_time: 32.1
+    fade_in_duration: 0.5
+    display_duration: 2.0
+    fade_out_duration: 0.5
+
+    font:
+      family: Georgia
+      size: 36
+      color: "#95A5A6"
+
+    position:
+      mode: relative
+      x: 0.65
+      y: 0.55
+
+    z_index: 14
+
+  - content: "(Pause)"
+    start_time: 34.6
+    fade_in_duration: 0.5
+    display_duration: 1.5
+    fade_out_duration: 0.5
+
+    font:
+      family: Georgia
+      size: 32
+      color: "#BDC3C7"
+
+    position:
+      mode: center
+
+    z_index: 14
+
+  # ===== PART 2: WHERE HAVE YOU BEEN (18s) =====
+  - content: "VLADIMIR: You've been here all the time?"
+    start_time: 36.6
+    fade_in_duration: 0.6
+    display_duration: 2.5
+    fade_out_duration: 0.6
+
+    font:
+      family: Courier
+      size: 42
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.25
+
+    z_index: 15
+
+  - content: "ESTRAGON: Where else would I be?"
+    start_time: 39.7
+    fade_in_duration: 0.6
+    display_duration: 2.5
+    fade_out_duration: 0.6
+
+    font:
+      family: Courier
+      size: 42
+      color: "#8B4513"
+
+    position:
+      mode: relative
+      x: 0.65
+      y: 0.45
+
+    z_index: 15
+
+  - content: "VLADIMIR: Quite right."
+    start_time: 42.8
+    fade_in_duration: 0.6
+    display_duration: 2.0
+    fade_out_duration: 0.6
+
+    font:
+      family: Courier
+      size: 42
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.25
+
+    z_index: 15
+
+  - content: "(Pause)"
+    start_time: 45.4
+    fade_in_duration: 0.5
+    display_duration: 1.5
+    fade_out_duration: 0.5
+
+    font:
+      family: Georgia
+      size: 32
+      color: "#BDC3C7"
+
+    position:
+      mode: center
+
+    z_index: 14
+
+  # ===== PART 3: KEEPING THE APPOINTMENT (22s) =====
+  - content: "ESTRAGON: We are not saints, but we have kept our appointment."
+    start_time: 47.4
+    fade_in_duration: 0.8
+    display_duration: 3.0
+    fade_out_duration: 0.8
+
+    font:
+      family: Georgia
+      size: 46
+      color: "#8B4513"
+
+    position:
+      mode: relative
+      x: 0.65
+      y: 0.5
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.0
+        target_spacing: 0.85
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: true
+        offset_x: 2
+        offset_y: 2
+        blur_radius: 2
+        color: "#00000040"
+
+    z_index: 15
+
+  - content: "How unlike us."
+    start_time: 51.6
+    fade_in_duration: 0.6
+    display_duration: 2.5
+    fade_out_duration: 0.6
+
+    font:
+      family: Georgia
+      size: 42
+      color: "#8B4513"
+
+    position:
+      mode: relative
+      x: 0.65
+      y: 0.6
+
+    z_index: 15
+
+  - content: "VLADIMIR: You mentioned nothing... during the time we were apart?"
+    start_time: 54.7
+    fade_in_duration: 0.8
+    display_duration: 3.0
+    fade_out_duration: 0.8
+
+    font:
+      family: Georgia
+      size: 42
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.3
+
+    z_index: 15
+
+  - content: "(Pause)"
+    start_time: 58.5
+    fade_in_duration: 0.5
+    display_duration: 1.5
+    fade_out_duration: 0.5
+
+    font:
+      family: Georgia
+      size: 32
+      color: "#BDC3C7"
+
+    position:
+      mode: center
+
+    z_index: 14
+
+  # ===== PART 4: THE CENTRAL QUESTION (30s) =====
+  - content: "VLADIMIR: And if he doesn't come?"
+    start_time: 60.5
+    fade_in_duration: 1.0
+    display_duration: 3.5
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 52
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.3
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.0
+        target_spacing: 0.88
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: true
+        offset_x: 3
+        offset_y: 3
+        blur_radius: 3
+        color: "#00000040"
+
+    z_index: 15
+
+  - content: "ESTRAGON: We'll come back tomorrow."
+    start_time: 65.0
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 52
+      color: "#8B4513"
+
+    position:
+      mode: relative
+      x: 0.65
+      y: 0.5
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.0
+        target_spacing: 0.88
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+      drop_shadow:
+        enabled: true
+        offset_x: 3
+        offset_y: 3
+        blur_radius: 3
+        color: "#00000040"
+
+    z_index: 15
+
+  - content: "And the day after tomorrow..."
+    start_time: 69.0
+    fade_in_duration: 0.8
+    display_duration: 3.0
+    fade_out_duration: 0.8
+
+    font:
+      family: Georgia
+      size: 48
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.35
+
+    z_index: 15
+
+  - content: "VLADIMIR: We are waiting for Godot."
+    start_time: 73.0
+    fade_in_duration: 1.0
+    display_duration: 3.5
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 54
+      color: "#1A5490"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 0.98
+        target_spacing: 0.87
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+
+    z_index: 15
+
+  # ===== PART 5: PHILOSOPHICAL MOMENT (28s) =====
+  - content: "What are we doing here, that is the question."
+    start_time: 77.5
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 50
+      color: "#34495E"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 0.98
+        target_spacing: 0.86
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+
+    z_index: 15
+
+  - content: "(Pause)"
+    start_time: 81.5
+    fade_in_duration: 0.5
+    display_duration: 1.5
+    fade_out_duration: 0.5
+
+    font:
+      family: Georgia
+      size: 32
+      color: "#BDC3C7"
+
+    position:
+      mode: center
+
+    z_index: 14
+
+  - content: "And we are blessed in this, that we happen to know this."
+    start_time: 83.5
+    fade_in_duration: 1.0
+    display_duration: 3.5
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 48
+      color: "#34495E"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 0.98
+        target_spacing: 0.86
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+
+    z_index: 15
+
+  - content: "But for the moment we are here, where we are waiting."
+    start_time: 88.0
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 46
+      color: "#34495E"
+
+    position:
+      mode: center
+
+    z_index: 15
+
+  - content: "(Pause)"
+    start_time: 92.0
+    fade_in_duration: 0.5
+    display_duration: 1.5
+    fade_out_duration: 0.5
+
+    font:
+      family: Georgia
+      size: 32
+      color: "#BDC3C7"
+
+    position:
+      mode: center
+
+    z_index: 14
+
+  # ===== PART 6: DECISION AND ACTION (25s) =====
+  - content: "VLADIMIR: What do you think?"
+    start_time: 94.0
+    fade_in_duration: 0.7
+    display_duration: 2.5
+    fade_out_duration: 0.7
+
+    font:
+      family: Courier
+      size: 42
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.15
+      y: 0.25
+
+    z_index: 15
+
+  - content: "ESTRAGON: I think we are here."
+    start_time: 97.2
+    fade_in_duration: 0.7
+    display_duration: 2.5
+    fade_out_duration: 0.7
+
+    font:
+      family: Courier
+      size: 42
+      color: "#8B4513"
+
+    position:
+      mode: relative
+      x: 0.65
+      y: 0.45
+
+    z_index: 15
+
+  - content: "VLADIMIR: Yes, but who is waiting for whom?"
+    start_time: 100.4
+    fade_in_duration: 0.7
+    display_duration: 2.5
+    fade_out_duration: 0.7
+
+    font:
+      family: Georgia
+      size: 42
+      color: "#1A5490"
+
+    position:
+      mode: center
+
+    z_index: 15
+
+  - content: "ESTRAGON: We are here. That is enough."
+    start_time: 103.6
+    fade_in_duration: 0.7
+    display_duration: 2.5
+    fade_out_duration: 0.7
+
+    font:
+      family: Georgia
+      size: 42
+      color: "#8B4513"
+
+    position:
+      mode: center
+
+    z_index: 15
+
+  - content: "VLADIMIR: Yes. Yes, let's go."
+    start_time: 106.8
+    fade_in_duration: 0.8
+    display_duration: 2.5
+    fade_out_duration: 0.8
+
+    font:
+      family: Georgia
+      size: 48
+      color: "#1A5490"
+
+    position:
+      mode: relative
+      x: 0.2
+      y: 0.35
+
+    effects:
+      drop_shadow:
+        enabled: true
+        offset_x: 3
+        offset_y: 3
+        blur_radius: 3
+        color: "#00000040"
+
+    z_index: 15
+
+  - content: "ESTRAGON: Yes, let's go."
+    start_time: 110.1
+    fade_in_duration: 0.8
+    display_duration: 2.5
+    fade_out_duration: 0.8
+
+    font:
+      family: Georgia
+      size: 48
+      color: "#8B4513"
+
+    position:
+      mode: relative
+      x: 0.6
+      y: 0.5
+
+    effects:
+      drop_shadow:
+        enabled: true
+        offset_x: 3
+        offset_y: 3
+        blur_radius: 3
+        color: "#00000040"
+
+    z_index: 15
+
+  # ===== PART 7: THE PARADOX (15s) =====
+  - content: "(They do not move.)"
+    start_time: 113.4
+    fade_in_duration: 1.0
+    display_duration: 3.5
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 50
+      color: "#95A5A6"
+
+    position:
+      mode: center
+
+    effects:
+      scale:
+        enabled: true
+        initial_scale: 0.85
+        apply_to_fade_out: true
+        easing: ease_in_out
+
+    z_index: 14
+
+  - content: "(The curtain slowly fades)"
+    start_time: 117.9
+    fade_in_duration: 1.0
+    display_duration: 2.5
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 40
+      color: "#BDC3C7"
+
+    position:
+      mode: center
+
+    z_index: 13
+
+  # ===== FINAL MEDITATION (30s) =====
+  - content: "In the beginning..."
+    start_time: 121.4
+    fade_in_duration: 1.2
+    display_duration: 2.5
+    fade_out_duration: 1.2
+
+    font:
+      family: Georgia
+      size: 56
+      color: "#7F8C8D"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.05
+        target_spacing: 0.90
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+
+    z_index: 15
+
+  - content: "There is nothing to be done."
+    start_time: 125.1
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 1.0
+
+    font:
+      family: Georgia
+      size: 54
+      color: "#34495E"
+
+    position:
+      mode: center
+
+    z_index: 15
+
+  - content: "Waiting for Godot..."
+    start_time: 130.1
+    fade_in_duration: 2.0
+    display_duration: 4.0
+    fade_out_duration: 2.0
+
+    font:
+      family: Georgia
+      size: 72
+      color: "#34495E"
+
+    position:
+      mode: center
+
+    effects:
+      letter_spacing:
+        enabled: true
+        initial_spacing: 1.0
+        target_spacing: 0.87
+        center_spacing: true
+        apply_to_fade_out: true
+        easing: ease_in_out
+      depth_of_field:
+        enabled: true
+        initial_distance: 0.4
+        inward_frames: 60
+        crisp_frames: 90
+        outward_frames: 60
+        blur_sigma: 0.25
+        blur_max_radius: 25
+        alpha_sigma: 0.18
+        alpha_min: 0.35
+      drop_shadow:
+        enabled: true
+        offset_x: 4
+        offset_y: 4
+        blur_radius: 4
+        color: "#00000050"
+
+    z_index: 15
+
+  # ===== CLOSING (10s) =====
+  - content: "THE END"
+    start_time: 138.1
+    fade_in_duration: 1.0
+    display_duration: 3.0
+    fade_out_duration: 2.0
+
+    font:
+      family: Georgia
+      size: 80
+      color: "#2C3E50"
+
+    position:
+      mode: center
+
+    effects:
+      scale:
+        enabled: true
+        initial_scale: 0.3
+        apply_to_fade_out: true
+        easing: ease_out
+      drop_shadow:
+        enabled: true
+        offset_x: 4
+        offset_y: 4
+        blur_radius: 4
+        color: "#00000060"
+
+    z_index: 20

@@ -69,6 +69,7 @@ words_on_paper/
 │       ├── cli.py           # Click CLI implementation
 │       ├── config/          # Configuration handling
 │       │   ├── schema.py    # Pydantic models
+│       │   ├── styles.py    # Cascading defaults/styles resolver (pure)
 │       │   └── loader.py    # Load/parse YAML/JSON
 │       ├── rendering/       # Text rendering
 │       │   ├── text_renderer.py # PIL text-to-image
@@ -86,6 +87,7 @@ words_on_paper/
 │           ├── image.py     # RGBA conversion helpers
 │           └── timing.py    # Frame/time conversions
 ├── tests/                   # Unit tests (mirror src/words_on_paper structure)
+│   └── fixtures/            # godot_flat.yaml: pre-styles Godot example for the equivalence test
 ├── examples/                # Example configurations
 ├── docs/                    # Additional docs (requirements.md)
 ├── pyproject.toml          # Project configuration
@@ -103,9 +105,11 @@ Note: `cli.py` and `main.py` live directly under `src/words_on_paper/`, not in a
   - `VideoConfig`: Root configuration
   - `TextSequence`: Individual text animation
   - `Position`, `Font`, `Effects`: Sub-configurations
+  - `VideoConfig.apply_styles` (`model_validator(mode="before")`) checks `defaults`/`styles` fragments for unknown keys, then expands the cascade via `styles.resolve_config()`
+- **styles.py**: Pydantic-free, pure cascade resolver (`deep_merge`, `resolve_style`, `resolve_text`, `resolve_config`); raises `StyleError` (a `ValueError`) on unknown styles or `extends` cycles
 - **loader.py**: Load YAML/JSON files, validate against schema
 
-Key design: Pydantic models provide runtime validation with clear error messages.
+Key design: Pydantic models provide runtime validation with clear error messages. Styles are resolved on raw dicts *before* validation, so `TextSequence` objects reaching composition/video are always fully filled in, and nothing downstream knows styles exist. `VideoConfig(**data)` and `load_config()` both get the cascade.
 
 #### rendering/ - Text Rendering
 - **text_renderer.py**: Convert text to PIL images
@@ -154,7 +158,7 @@ Key design: Encapsulates MoviePy complexity; peak memory is bounded at ~`MAX_WOR
 Key design: Simple utilities, thoroughly tested.
 
 #### Command-Line Interface
-- **cli.py**: Click commands (generate, validate) — lives directly under `src/words_on_paper/`, not a `cli/` subpackage
+- **cli.py**: Click commands (generate, validate — `validate --resolved [--text N]` dumps computed texts) — lives directly under `src/words_on_paper/`, not a `cli/` subpackage
 - **__main__.py**: Entry point
 
 Key design: Simple, user-friendly error messages.
@@ -192,6 +196,8 @@ Pre-commit automatically runs:
 - `video`: Resolution (width, height) and FPS
 - `background`: Background type and color
 - `texts`: List of text sequences
+- `defaults` (optional): TextSequence fields applied to every text
+- `styles` (optional): named TextSequence fragments; a style may `extends` another (name or list)
 
 **Text Sequence**: Individual animated text
 - Timing: `start_time`, `fade_in_duration`, `display_duration`, `fade_out_duration`
@@ -200,6 +206,9 @@ Pre-commit automatically runs:
 - Appearance: `font` (family, size, color)
 - Effects (`effects`): `typing` (reveal animation), `drop_shadow`, `scale` (scale/depth during fades), `letter_spacing` (sequential or `center_spacing` perspective illusion, clamped to a minimum readable spacing), `depth_of_field` (focal-plane blur/alpha)
 - Layering: `z_index` (higher = on top)
+- Styling: `style` (name or list of names from `styles`; kept on the resolved text for inspection)
+
+**Cascade** (low → high): schema defaults < `defaults` < styles in listed order (each style's `extends` chain first) < inline fields. Nested dicts (`font`, `position`, `effects.*`) merge key by key; scalars and lists replace. Unknown keys inside `defaults`/`styles` are errors (elsewhere Pydantic still ignores extras — `extra="forbid"` was deliberately not turned on globally). `words-on-paper validate --resolved [--text N]` prints the computed texts.
 
 ### Validation
 
@@ -285,6 +294,7 @@ Frames are streamed to the encoder rather than materialized up front, so memory 
 
 ## Recent Changes
 
+- Added cascading `defaults`/`styles` (with `extends`) to configs, strict key checks inside them, `validate --resolved`; rewrote the Godot full-scene example with styles (850 → 329 lines, equivalence-tested against `tests/fixtures/godot_flat.yaml`); fixed CLI error path (`click.Exit` didn't exist)
 - Renamed package from `my_python_project` to `words_on_paper`
 - Moved package to a `src/` layout (`src/words_on_paper/`)
 - Added all core modules with comprehensive testing (213 tests, 91% coverage)

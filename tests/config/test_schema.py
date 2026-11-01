@@ -363,3 +363,115 @@ class TestVideoConfig:
             ]
         )
         assert config.get_video_duration() == 10.0
+
+
+class TestCascadingStyles:
+    """Test defaults/styles integration in VideoConfig."""
+
+    def test_defaults_only(self) -> None:
+        """defaults apply to every text; schema defaults fill the rest."""
+        config = VideoConfig(
+            defaults={"font": {"family": "Courier", "size": 40}, "z_index": 3},
+            texts=[{"content": "a"}, {"content": "b", "font": {"size": 10}}],
+        )
+        assert config.texts[0].font.family == "Courier"
+        assert config.texts[0].font.size == 40
+        assert config.texts[0].font.color == "#000000"
+        assert config.texts[0].z_index == 3
+        assert config.texts[1].font.family == "Courier"
+        assert config.texts[1].font.size == 10
+
+    def test_style_only(self) -> None:
+        """A referenced style is applied and recorded on the text."""
+        config = VideoConfig(
+            styles={"vlad": {"font": {"color": "#1A5490"}, "position": {"x": 0.15}}},
+            texts=[{"content": "a", "style": "vlad"}],
+        )
+        text = config.texts[0]
+        assert text.font.color == "#1A5490"
+        assert text.position.x == 0.15
+        assert text.style == "vlad"
+
+    def test_inline_overrides_style_and_defaults(self) -> None:
+        """Inline fields beat styles, which beat defaults."""
+        config = VideoConfig(
+            defaults={"fade_in_duration": 0.1, "z_index": 1},
+            styles={"s": {"fade_in_duration": 0.2, "z_index": 2}},
+            texts=[{"content": "a", "style": "s", "z_index": 9}],
+        )
+        assert config.texts[0].fade_in_duration == 0.2
+        assert config.texts[0].z_index == 9
+
+    def test_unknown_field_in_style(self) -> None:
+        """A typo inside a style fails loudly with its path."""
+        with pytest.raises(ValidationError, match=r"styles\.vlad\.font\.colour"):
+            VideoConfig(styles={"vlad": {"font": {"colour": "#FFFFFF"}}}, texts=[])
+
+    def test_unknown_field_in_defaults(self) -> None:
+        """A typo inside defaults fails loudly with its path."""
+        with pytest.raises(ValidationError, match=r"defaults\.effects\.typng"):
+            VideoConfig(defaults={"effects": {"typng": {"enabled": True}}})
+
+    def test_style_key_forbidden_in_defaults_and_styles(self) -> None:
+        """'style' is only meaningful on texts; styles use 'extends'."""
+        with pytest.raises(ValidationError, match=r"defaults\.style: not allowed"):
+            VideoConfig(defaults={"style": "x"})
+        with pytest.raises(ValidationError, match=r"styles\.a\.style: not allowed"):
+            VideoConfig(styles={"a": {"style": "b"}, "b": {}})
+
+    def test_extends_only_in_styles(self) -> None:
+        """'extends' is accepted in styles but is an unknown field in defaults."""
+        VideoConfig(styles={"a": {"z_index": 1}, "b": {"extends": "a"}})
+        with pytest.raises(ValidationError, match=r"defaults\.extends: unknown"):
+            VideoConfig(defaults={"extends": "a"}, styles={"a": {}})
+
+    def test_unknown_style_ref(self) -> None:
+        """Referencing a missing style names the text."""
+        with pytest.raises(ValidationError, match=r"texts\[0\]: unknown style 'nope'"):
+            VideoConfig(texts=[{"content": "a", "style": "nope"}])
+
+    def test_style_cycle(self) -> None:
+        """A cycle in extends is reported."""
+        with pytest.raises(ValidationError, match="a -> b -> a"):
+            VideoConfig(
+                styles={"a": {"extends": "b"}, "b": {"extends": "a"}},
+                texts=[{"content": "x", "style": "a"}],
+            )
+
+    def test_bad_value_from_style_names_text_and_style(self) -> None:
+        """An invalid value coming from a style mentions the text and style."""
+        with pytest.raises(
+            ValidationError, match=r"texts\[0\] \(style: big\): font\.size"
+        ):
+            VideoConfig(
+                styles={"big": {"font": {"size": -5}}},
+                texts=[{"content": "a", "style": "big"}],
+            )
+
+    def test_style_may_set_content(self) -> None:
+        """Styles may set any field, including content."""
+        config = VideoConfig(
+            styles={"pause": {"content": "(Pause.)"}}, texts=[{"style": "pause"}]
+        )
+        assert config.texts[0].content == "(Pause.)"
+
+    def test_duration_from_defaults(self) -> None:
+        """get_video_duration uses timings that come only from defaults."""
+        config = VideoConfig(
+            defaults={
+                "fade_in_duration": 0.5,
+                "display_duration": 1.0,
+                "fade_out_duration": 0.5,
+            },
+            styles={"late": {"start_time": 10.0}},
+            texts=[{"content": "a"}, {"content": "b", "style": "late"}],
+        )
+        assert config.get_video_duration() == 12.0
+
+    def test_no_styles_unchanged(self) -> None:
+        """Configs without defaults/styles behave exactly as before."""
+        config = VideoConfig(texts=[{"content": "a"}])
+        assert config.defaults == {}
+        assert config.styles == {}
+        assert config.texts[0].style is None
+        assert config.texts[0].font == Font()
