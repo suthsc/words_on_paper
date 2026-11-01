@@ -53,6 +53,10 @@ pytest
 # Validate a configuration
 words-on-paper validate examples/simple_fade.yaml
 
+# Show each text's effective settings after defaults/styles are applied
+words-on-paper validate examples/waiting_for_godot_full_scene.yaml --resolved
+words-on-paper validate examples/waiting_for_godot_full_scene.yaml --text 14
+
 # Generate a video
 words-on-paper generate examples/simple_fade.yaml -o output.mp4
 ```
@@ -177,6 +181,69 @@ Examples:
 - `#FF0000` - Red
 - `#00000040` - Black with 50% opacity
 
+### Defaults and Styles
+
+Long scripts repeat the same settings on every line: each character's font,
+color and position, the usual fade timings, and so on. As in CSS, you can
+declare these once and let them cascade:
+
+```yaml
+defaults:                 # applied to every text
+  fade_in_duration: 0.8
+  fade_out_duration: 0.8
+  font: {family: Georgia}
+
+styles:                   # named, reusable fragments
+  vladimir_voice:
+    font: {color: "#1A5490", size: 42}
+  vladimir:
+    extends: vladimir_voice          # a name or a list of names
+    font: {family: Courier}
+    position: {mode: relative, x: 0.15, y: 0.25}
+  shadow:
+    effects:
+      drop_shadow: {offset_x: 3, offset_y: 3}
+
+texts:
+  - style: vladimir
+    content: "VLADIMIR: Nothing to be done."
+    start_time: 22.0
+  - style: [vladimir, shadow]        # several styles; later ones win
+    content: "VLADIMIR: Quite right."
+    start_time: 42.8
+    font: {size: 48}                 # inline fields win over everything
+```
+
+**Precedence** (lowest to highest):
+
+| Level | Where | Notes |
+|-------|-------|-------|
+| 1 | Built-in defaults | The values in the schema (e.g. `font.size: 72`) |
+| 2 | `defaults` | Applied to every text |
+| 3 | Styles in `style:` | In the order listed; each style's `extends` chain applies first |
+| 4 | Inline text fields | Always win |
+
+**Merge rules:**
+
+- Nested blocks (`font`, `position`, `effects.<name>`) merge key by key, so a
+  style can set just `font.color` and keep the family and size from below.
+- Plain values and lists replace what's below them.
+- There's no way to "unset" a value; override it instead (for example
+  `effects: {drop_shadow: {enabled: false}}`).
+
+**Validation:**
+
+- Styles may set any text field, including timings and `content`.
+- `extends` is only allowed inside `styles`; `style` is only allowed on texts.
+- Unknown keys in `defaults` or a style are errors with a path, e.g.
+  `styles.vladimir.font.colour: unknown field`, so a typo can't silently drop a
+  setting for every text that uses the style.
+- Unknown style names and `extends` cycles (`a -> b -> a`) are reported.
+- Use `words-on-paper validate --resolved` (optionally `--text N`) to see the
+  computed values for each text, like a browser's "computed styles" panel.
+
+See `examples/waiting_for_godot_full_scene.yaml` for a complete example.
+
 ## Examples
 
 The `examples/` directory contains several example configurations:
@@ -185,6 +252,7 @@ The `examples/` directory contains several example configurations:
 - **typing_effect.yaml** - Text with typing effect
 - **overlapping_phrases.yaml** - Multiple overlapping text sequences
 - **complete_demo.yaml** - Comprehensive demo of all features
+- **waiting_for_godot_full_scene.yaml** - A full scene written with `defaults` and `styles`
 
 ## Architecture
 
@@ -243,7 +311,7 @@ generate_video(config, "output.mp4")
 
 All configuration classes are Pydantic models that validate input:
 
-- **VideoConfig** - Root configuration
+- **VideoConfig** - Root configuration (including `defaults` and `styles`)
 - **TextSequence** - Text animation configuration
 - **Position** - Text positioning
 - **Font** - Font configuration

@@ -69,6 +69,7 @@ words_on_paper/
 │       ├── cli.py           # Click CLI implementation
 │       ├── config/          # Configuration handling
 │       │   ├── schema.py    # Pydantic models
+│       │   ├── styles.py    # Cascading defaults/styles resolver (pure)
 │       │   └── loader.py    # Load/parse YAML/JSON
 │       ├── rendering/       # Text rendering
 │       │   ├── text_renderer.py # PIL text-to-image
@@ -80,12 +81,13 @@ words_on_paper/
 │       │   ├── animator.py  # Calculate opacity/typing/effects
 │       │   └── layer_manager.py # Z-ordering & compositing
 │       ├── video/           # Video output
-│       │   └── assembler.py # MoviePy video generation (parallel frame batches)
+│       │   └── assembler.py # MoviePy video generation (streamed parallel frame batches)
 │       └── utils/           # Utilities
 │           ├── color.py     # Color parsing/conversion
 │           ├── image.py     # RGBA conversion helpers
 │           └── timing.py    # Frame/time conversions
 ├── tests/                   # Unit tests (mirror src/words_on_paper structure)
+│   └── fixtures/            # godot_flat.yaml: pre-styles Godot example for the equivalence test
 ├── examples/                # Example configurations
 ├── docs/                    # Additional docs (requirements.md)
 ├── pyproject.toml          # Project configuration
@@ -103,9 +105,11 @@ Note: `cli.py` and `main.py` live directly under `src/words_on_paper/`, not in a
   - `VideoConfig`: Root configuration
   - `TextSequence`: Individual text animation
   - `Position`, `Font`, `Effects`: Sub-configurations
+  - `VideoConfig.apply_styles` (`model_validator(mode="before")`) checks `defaults`/`styles` fragments for unknown keys, then expands the cascade via `styles.resolve_config()`
+- **styles.py**: Pydantic-free, pure cascade resolver (`deep_merge`, `resolve_style`, `resolve_text`, `resolve_config`); raises `StyleError` (a `ValueError`) on unknown styles or `extends` cycles
 - **loader.py**: Load YAML/JSON files, validate against schema
 
-Key design: Pydantic models provide runtime validation with clear error messages.
+Key design: Pydantic models provide runtime validation with clear error messages. Styles are resolved on raw dicts *before* validation, so `TextSequence` objects reaching composition/video are always fully filled in, and nothing downstream knows styles exist. `VideoConfig(**data)` and `load_config()` both get the cascade.
 
 #### rendering/ - Text Rendering
 - **text_renderer.py**: Convert text to PIL images
@@ -136,16 +140,15 @@ Key design: NumPy-based noise generation for performance.
   - Sort by z_index
   - Handle alpha compositing
 
-Key design: Stateless frame generation from config + time — each frame is built fresh with no cross-frame caching yet (see `words_on_paper-4eh` in beads for planned streaming/memory work).
+Key design: Stateless frame generation from config + time — each frame is built fresh. The only cross-frame caching is of pure lookups: `load_font()` and `generate_background()` are wrapped in `@lru_cache` (per worker process). The cached background is shared, so callers must copy it before mutating it (`ensure_rgba()` and `composite_layers()` both do).
 
 #### video/ - Video Assembly
 - **assembler.py**: MoviePy integration
-  - Generates frames in parallel chunks via `ProcessPoolExecutor` (8 workers, ~100 frames/chunk)
-  - Collects all frames in memory, builds an `ImageSequenceClip`
-  - Write video file with progress bar
-  - Known limitation: long videos (>~1 min) can OOM because all frames are materialized before writing; see `words_on_paper-4eh`
+  - `_stream_frames()` generates frames in parallel chunks via `ProcessPoolExecutor` (`MAX_WORKERS = 8`, `CHUNK_SIZE = 100`) and yields them in order, keeping at most `MAX_WORKERS` chunks in flight
+  - `_SequentialFrameFeeder` adapts that iterator to MoviePy's `make_frame(t)`, relying on `write_videofile` requesting `t` in non-decreasing order
+  - `generate_video()` builds a `VideoClip(make_frame=...)` sized to exactly `total_frames` and writes it with a per-chunk tqdm progress bar
 
-Key design: Encapsulates MoviePy complexity, uses tqdm for progress.
+Key design: Encapsulates MoviePy complexity; peak memory is bounded at ~`MAX_WORKERS * CHUNK_SIZE` frames regardless of video length.
 
 #### utils/ - Utilities
 - **color.py**: Hex/RGB/RGBA color parsing
@@ -155,7 +158,7 @@ Key design: Encapsulates MoviePy complexity, uses tqdm for progress.
 Key design: Simple utilities, thoroughly tested.
 
 #### Command-Line Interface
-- **cli.py**: Click commands (generate, validate) — lives directly under `src/words_on_paper/`, not a `cli/` subpackage
+- **cli.py**: Click commands (generate, validate — `validate --resolved [--text N]` dumps computed texts) — lives directly under `src/words_on_paper/`, not a `cli/` subpackage
 - **__main__.py**: Entry point
 
 Key design: Simple, user-friendly error messages.
@@ -193,6 +196,8 @@ Pre-commit automatically runs:
 - `video`: Resolution (width, height) and FPS
 - `background`: Background type and color
 - `texts`: List of text sequences
+- `defaults` (optional): TextSequence fields applied to every text
+- `styles` (optional): named TextSequence fragments; a style may `extends` another (name or list)
 
 **Text Sequence**: Individual animated text
 - Timing: `start_time`, `fade_in_duration`, `display_duration`, `fade_out_duration`
@@ -201,6 +206,9 @@ Pre-commit automatically runs:
 - Appearance: `font` (family, size, color)
 - Effects (`effects`): `typing` (reveal animation), `drop_shadow`, `scale` (scale/depth during fades), `letter_spacing` (sequential or `center_spacing` perspective illusion, clamped to a minimum readable spacing), `depth_of_field` (focal-plane blur/alpha)
 - Layering: `z_index` (higher = on top)
+- Styling: `style` (name or list of names from `styles`; kept on the resolved text for inspection)
+
+**Cascade** (low → high): schema defaults < `defaults` < styles in listed order (each style's `extends` chain first) < inline fields. Nested dicts (`font`, `position`, `effects.*`) merge key by key; scalars and lists replace. Unknown keys inside `defaults`/`styles` are errors (elsewhere Pydantic still ignores extras — `extra="forbid"` was deliberately not turned on globally). `words-on-paper validate --resolved [--text N]` prints the computed texts.
 
 ### Validation
 
@@ -220,7 +228,7 @@ Each module has comprehensive unit tests:
 - **composition**: Animation calculations, frame building, positioning
 - **utils**: Color conversions, timing calculations
 
-**Coverage gap**: there is no `tests/video/` directory — `video/assembler.py` (parallel frame generation, `ImageSequenceClip` assembly, file writing) is essentially untested (~16% coverage). Any work on the assembler (e.g. the streaming/memory redesign in `words_on_paper-4eh`) should add tests here.
+- **video**: `tests/video/test_assembler.py` covers frame ordering, the in-flight bound in `_stream_frames()`, `_SequentialFrameFeeder` stepping, and an end-to-end `generate_video()` frame-count check (~94% coverage of `assembler.py`)
 
 ### Integration Tests
 - `test_frame_builder.py`: End-to-end frame generation
@@ -238,16 +246,16 @@ Each module has comprehensive unit tests:
 - Background generation: ~50-100ms per frame (NumPy)
 - Compositing: ~50-200ms per frame (PIL)
 - Total: ~1-3 seconds per 1080p frame
-- `video/assembler.py` parallelizes frame generation across an 8-worker `ProcessPoolExecutor` in ~100-frame chunks
+- `video/assembler.py` parallelizes frame generation across an 8-worker `ProcessPoolExecutor` in 100-frame chunks
+- Background generation and font loading are cached (`@lru_cache`), so their cost is paid once per worker process rather than per frame
 
-### Known Limitation: Long Videos Can OOM
-Because all generated frames are currently held in memory before being handed to `ImageSequenceClip`, videos longer than roughly one minute can run out of memory. A streaming/bounded-memory redesign (built on MoviePy's `VideoClip(make_frame=...)` instead of `ImageSequenceClip`) is planned — see beads issue `words_on_paper-4eh`.
+### Memory
+Frames are streamed to the encoder rather than materialized up front, so memory stays roughly constant (~`MAX_WORKERS * CHUNK_SIZE` frames, i.e. ~800 frames) regardless of video length. Lower `MAX_WORKERS` or `CHUNK_SIZE` in `video/assembler.py` if that is still too much at high resolutions.
 
 ### Optimization Tips
 - Use lower resolution for previews
 - Reduce texture_intensity (affects background generation)
 - Minimize text sequences and effects
-- Font loading (`rendering/fonts.py:load_font()`) and static background generation are not currently cached across frames — caching them is a known low-risk win
 
 ## Extending the System
 
@@ -286,9 +294,12 @@ Because all generated frames are currently held in memory before being handed to
 
 ## Recent Changes
 
+- Added cascading `defaults`/`styles` (with `extends`) to configs, strict key checks inside them, `validate --resolved`; rewrote the Godot full-scene example with styles (850 → 329 lines, equivalence-tested against `tests/fixtures/godot_flat.yaml`); fixed CLI error path (`click.Exit` didn't exist)
 - Renamed package from `my_python_project` to `words_on_paper`
 - Moved package to a `src/` layout (`src/words_on_paper/`)
-- Added all core modules with comprehensive testing (204 tests, 85% coverage)
+- Added all core modules with comprehensive testing (213 tests, 91% coverage)
+- Streamed video frames through `VideoClip(make_frame=...)` instead of materializing them all, fixing OOM on long videos; cached font loading and background generation
+- Clamped absolute/relative text positions to frame bounds; fixed typing-effect position drift
 - Added scale, letter-spacing (sequential, centered, perspective), and depth-of-field effects
 - Grew example configurations to 11 (including letter-spacing and multi-scene examples like `waiting_for_godot_full_scene.yaml`)
 - Parallelized frame generation in `video/assembler.py` via `ProcessPoolExecutor`
@@ -336,13 +347,13 @@ Because all generated frames are currently held in memory before being handed to
 - [ ] Audio synchronization
 - [ ] Performance profiling and optimization
 - [ ] Additional output formats (GIF, WebP)
-- [ ] Streaming/bounded-memory video rendering for videos >~1 minute (tracked: `words_on_paper-4eh`)
+- [x] Streaming/bounded-memory video rendering for long videos (done — `words_on_paper-4eh`)
 
 Full backlog and in-progress work is tracked in beads (`bd ready`, `bd list`), not this list — treat this section as a high-level, occasionally-stale wishlist.
 
 ---
 
-**Last Updated**: 2026-08-13
+**Last Updated**: 2026-10-18
 **Current Version**: 0.1.0
 
 

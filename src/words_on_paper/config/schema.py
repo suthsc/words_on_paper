@@ -2,9 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+
+from words_on_paper.config.styles import EXTENDS_KEY, STYLE_KEY, resolve_config
 
 
 class Position(BaseModel):
@@ -120,6 +128,10 @@ class TextSequence(BaseModel):
     font: Font = Field(default_factory=Font)
     effects: Effects = Field(default_factory=Effects)
     z_index: int = 0
+    style: Optional[Union[str, list[str]]] = Field(
+        default=None,
+        description="Name(s) of styles applied before inline fields (later wins)",
+    )
 
 
 class BackgroundConfig(BaseModel):
@@ -141,7 +153,39 @@ class VideoConfig(BaseModel):
         }
     )
     background: BackgroundConfig = Field(default_factory=BackgroundConfig)
+    defaults: dict[str, Any] = Field(
+        default_factory=dict,
+        description="TextSequence fields applied to every text (lowest precedence)",
+    )
+    styles: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Named, reusable TextSequence fragments; may 'extends' others",
+    )
     texts: list[TextSequence] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_styles(cls, data: Any) -> Any:
+        """Check style fragments, then expand defaults/styles into each text."""
+        if not isinstance(data, dict):
+            return data
+        defaults = data.get("defaults")
+        styles = data.get("styles")
+        if isinstance(defaults, dict):
+            _check_fragment(defaults, TextSequence, "defaults", forbid={STYLE_KEY})
+        if isinstance(styles, dict):
+            for name, body in styles.items():
+                if isinstance(body, dict):
+                    _check_fragment(
+                        body,
+                        TextSequence,
+                        f"styles.{name}",
+                        allow={EXTENDS_KEY},
+                        forbid={STYLE_KEY},
+                    )
+        resolved = resolve_config(data)
+        _explain_styled_text_errors(resolved)
+        return resolved
 
     @field_validator("video")
     @classmethod
@@ -176,3 +220,57 @@ class VideoConfig(BaseModel):
             max_end_time = max(max_end_time, end_time)
 
         return max_end_time
+
+
+def _check_fragment(
+    fragment: dict[str, Any],
+    model: type[BaseModel],
+    path: str,
+    allow: frozenset[str] | set[str] = frozenset(),
+    forbid: frozenset[str] | set[str] = frozenset(),
+) -> None:
+    """Raise ValueError for keys in ``fragment`` that ``model`` doesn't define.
+
+    Pydantic ignores unknown keys, which would make a typo in a style (say
+    ``colour``) silently drop the setting for every text using it. Nested
+    model fields (font, position, effects.*) are checked recursively.
+    """
+    for key, value in fragment.items():
+        if key in allow:
+            continue
+        if key in forbid:
+            raise ValueError(f"{path}.{key}: not allowed here")
+        field = model.model_fields.get(key)
+        if field is None:
+            raise ValueError(f"{path}.{key}: unknown field")
+        sub = field.annotation
+        if (
+            isinstance(sub, type)
+            and issubclass(sub, BaseModel)
+            and isinstance(value, dict)
+        ):
+            _check_fragment(value, sub, f"{path}.{key}")
+
+
+def _explain_styled_text_errors(resolved: Any) -> None:
+    """Re-raise validation errors in styled texts with their index and styles.
+
+    After the cascade, a bad value may come from a style rather than the text
+    itself, so name the styles involved. Unstyled texts are left for the normal
+    Pydantic error.
+    """
+    if not isinstance(resolved, dict) or not isinstance(resolved.get("texts"), list):
+        return
+    for i, text in enumerate(resolved["texts"]):
+        if not isinstance(text, dict) or text.get(STYLE_KEY) is None:
+            continue
+        try:
+            TextSequence.model_validate(text)
+        except ValidationError as exc:
+            style = text[STYLE_KEY]
+            names = ", ".join(style) if isinstance(style, list) else style
+            problems = "; ".join(
+                f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}"
+                for err in exc.errors()
+            )
+            raise ValueError(f"texts[{i}] (style: {names}): {problems}") from None
